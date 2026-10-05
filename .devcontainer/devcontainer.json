@@ -1,0 +1,19 @@
+{
+  "name": "service-atlas",
+  "image": "mcr.microsoft.com/devcontainers/go:1.22",
+  "forwardPorts": [8080],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go"
+      ],
+      "settings": {
+        "go.toolsManagement.autoUpdate": true,
+        "go.useLanguageServer": true,
+        "go.lintTool": "golangci-lint"
+      }
+    }
+  },
+  "postCreateCommand": "go mod tidy",
+  "remoteUser": "vscode"
+}
