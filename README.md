@@ -2,6 +2,8 @@
 
 Minimal service that generates a service overview homepage from Certificate Transparency (CT) logs.
 
+![Screenshot of the service overview](.github/assets/screenshot.png)
+
 ## Philosophy
 
 With AI-assisted programming it has become easy to build large, complicated systems that nobody can maintain or keep a full overview of. This project is a fun counter initiative: every file stays at **150 lines or less**, including the docs, config and vendored CSS, so the whole project can still be read and verified by hand.

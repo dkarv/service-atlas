@@ -28,10 +28,11 @@ jobs:
               "Dockerfile": "Distroless container image",
               "go.mod": "Go module definition",
           }
-          files = subprocess.check_output(["git", "ls-files"], text=True).split()
+          # Hidden files and folders like .github don't count.
+          files = [f for f in subprocess.check_output(["git", "ls-files"], text=True).split() if not re.search(r"(^|/)\.", f)]
           lines = {f: open(f, "rb").read().count(b"\n") for f in files}
-          # The table skips hidden files and folders like .github, and Markdown docs.
-          listed = sorted((f for f in files if not re.search(r"(^|/)\.|\.md$", f)), key=lines.get, reverse=True)
+          # The table also skips Markdown docs.
+          listed = sorted((f for f in files if not f.endswith(".md")), key=lines.get, reverse=True)
 
           unknown = [f for f in listed if f not in desc]
           for f in unknown:
