@@ -1,57 +1,33 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<title>Services</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:2rem;line-height:1.4}
-h1{margin-bottom:.5rem}
-table{border-collapse:collapse;width:100%;max-width:900px}
-th,td{border:1px solid #ddd;padding:.4rem .6rem;text-align:left}
-th{background:#f5f5f5}
-a{text-decoration:none;color:#0066cc}
-a:hover{text-decoration:underline}
-small{color:#666}
-</style>
+  <meta charset="utf-8">
+  <title>Services</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="/blades.min.css" rel="stylesheet">
+  <link href="/style.css" rel="stylesheet">
 </head>
+
 <body>
-<h1 id="title">Services</h1>
-<small id="meta">Loading…</small>
-<table id="tbl">
-<tr><th>Hostname</th><th>Link</th></tr>
-</table>
+  <main class="container">
+    <header class="stack">
+      <h1 id="title">Services</h1>
+      <small><span id="meta">Loading services...</span> <a id="refresh" title="Refresh (skips the cache)" hidden>🔃</a></small>
+    </header>
 
-<script>
-(async () => {
-  const res = await fetch('/api/subdomains');
-  if (!res.ok) {
-    document.getElementById('meta').textContent = 'Error loading subdomains.';
-    return;
-  }
-  const data = await res.json();
-  const domain = data.domain;
-  const subs = data.subdomains || [];
-
-  document.getElementById('title').textContent = 'Services under ' + domain;
-  document.getElementById('meta').textContent =
-    'Generated from Certificate Transparency logs (crt.sh). Cached for ' + data.cached_ttl + '.';
-
-  const tbl = document.getElementById('tbl');
-  for (const s of subs) {
-    const tr = document.createElement('tr');
-    const td1 = document.createElement('td');
-    td1.textContent = s;
-    const td2 = document.createElement('td');
-    const a = document.createElement('a');
-    a.href = 'https://' + s;
-    a.textContent = 'https://' + s;
-    td2.appendChild(a);
-    tr.appendChild(td1);
-    tr.appendChild(td2);
-    tbl.appendChild(tr);
-  }
-})();
-</script>
+    <section class="grid services" aria-label="Self-hosted projects">
+      <article id="service-template" class="card stack">
+        <h5>
+          <span><img data-service-icon alt="" hidden> <span data-service-name>Loading services...</span></span>
+          <a data-service-link title="Open" target="_blank" rel="noopener" hidden>↗️</a>
+        </h5>
+        <p data-service-description>Fetching discovered hostnames.</p>
+        <small data-service-status></small>
+      </article>
+    </section>
+  </main>
+  <script src="/main.js"></script>
 </body>
+
 </html>

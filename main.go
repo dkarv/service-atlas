@@ -1,164 +1,148 @@
 package main
 
 import (
+	"embed"
 	"encoding/json"
-	"fmt"
+	"html"
+	"io"
 	"io/fs"
-	"net"
+	"log"
 	"net/http"
 	"net/url"
-	"sort"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
-	"sync"
 	"time"
 )
 
-type ctCert struct {
-	NameValue string `json:"name_value"`
+var (
+	ttl         = 24 * time.Hour // subdomain list from crt.sh
+	checkTTL    = time.Hour      // probe results
+	probeClient = &http.Client{Timeout: 5 * time.Second}
+	manifestRe  = regexp.MustCompile(`(?is)<link[^>]+rel=["']?manifest["']?[^>]*>`)
+	iconRe      = regexp.MustCompile(`(?is)<link[^>]+rel=["'][^"']*icon[^"']*["'][^>]*>`)
+	hrefRe      = regexp.MustCompile(`(?is)href=["']([^"']+)["']`)
+)
+
+//go:embed static/*
+var embedFS embed.FS
+
+type service struct {
+	Host        string `json:"host"`
+	Issued      string `json:"issued"` // date of the latest certificate
+	Status      int    `json:"status"`
+	Error       string `json:"error,omitempty"`
+	Name        string `json:"name,omitempty"`
+	Description string `json:"description,omitempty"`
+	Favicon     string `json:"favicon,omitempty"`
 }
 
 type cacheEntry struct {
-	subdomains []string
-	expiresAt  time.Time
+	FetchedAt time.Time `json:"fetched_at"`
+	CheckedAt time.Time `json:"checked_at"`
+	Services  []service `json:"services"`
 }
 
-var (
-	cache   = make(map[string]cacheEntry)
-	cacheMu sync.RWMutex
-	ttl     = 15 * time.Minute
-	client  = &http.Client{Timeout: 20 * time.Second}
-)
-
-func fetchSubdomains(domain string) ([]string, error) {
-	u := &url.URL{
-		Scheme: "https",
-		Host:   "crt.sh",
-		Path:   "/",
-	}
-	q := u.Query()
-	q.Set("q", "%."+domain)
-	q.Set("output", "json")
-	u.RawQuery = q.Encode()
-
-	resp, err := client.Get(u.String())
+// fetchSubdomains lists the subdomains in the CT logs with the date of their latest certificate.
+func fetchSubdomains(domain string) ([]service, error) {
+	client := http.Client{Timeout: 20 * time.Second}
+	resp, err := client.Get("https://crt.sh/?output=json&q=" + url.QueryEscape("%."+domain))
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("crt.sh status: %d", resp.StatusCode)
+	var certs []struct {
+		NameValue string `json:"name_value"`
+		NotBefore string `json:"not_before"`
 	}
-
-	var certs []ctCert
 	if err := json.NewDecoder(resp.Body).Decode(&certs); err != nil {
 		return nil, err
 	}
-
-	set := make(map[string]struct{})
+	latest := map[string]string{}
 	for _, c := range certs {
-		for _, name := range strings.Split(c.NameValue, "\n") {
-			name = strings.TrimSpace(name)
-			if name == "" {
-				continue
+		for _, name := range strings.Fields(strings.ToLower(c.NameValue)) {
+			// ISO timestamps compare as strings.
+			if strings.HasSuffix(name, "."+domain) && !strings.HasPrefix(name, "*") && c.NotBefore > latest[name] {
+				latest[name] = c.NotBefore
 			}
-			name = strings.ToLower(name)
-			if !strings.HasSuffix(name, "."+domain) && name != domain {
-				continue
-			}
-			set[name] = struct{}{}
 		}
 	}
-
-	list := make([]string, 0, len(set))
-	for s := range set {
-		list = append(list, s)
+	var services []service
+	for host, issued := range latest {
+		services = append(services, service{Host: host, Issued: issued})
 	}
-	sort.Strings(list)
-	return list, nil
+	return services, nil
 }
 
-func getSubdomains(domain string) ([]string, error) {
-	now := time.Now()
-
-	cacheMu.RLock()
-	if e, ok := cache[domain]; ok && now.Before(e.expiresAt) {
-		cacheMu.RUnlock()
-		return e.subdomains, nil
-	}
-	cacheMu.RUnlock()
-
-	list, err := fetchSubdomains(domain)
+// probe requests https://host and extracts its favicon and web app manifest name and description.
+func probe(s service) service {
+	s = service{Host: s.Host, Issued: s.Issued}
+	resp, err := probeClient.Get("https://" + s.Host)
 	if err != nil {
-		return nil, err
+		s.Error = err.Error()
+		return s
 	}
+	defer resp.Body.Close()
+	s.Status = resp.StatusCode
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 
-	cacheMu.Lock()
-	cache[domain] = cacheEntry{subdomains: list, expiresAt: now.Add(ttl)}
-	cacheMu.Unlock()
-
-	return list, nil
+	// Links are resolved against the final URL, since the request may have been redirected.
+	if m := hrefRe.FindSubmatch(iconRe.Find(body)); m != nil {
+		if u, err := resp.Request.URL.Parse(html.UnescapeString(string(m[1]))); err == nil {
+			s.Favicon = u.String()
+		}
+	}
+	if m := hrefRe.FindSubmatch(manifestRe.Find(body)); m != nil {
+		if u, err := resp.Request.URL.Parse(html.UnescapeString(string(m[1]))); err == nil {
+			if r, err := probeClient.Get(u.String()); err == nil {
+				var manifest struct{ Name, Description string }
+				json.NewDecoder(r.Body).Decode(&manifest)
+				r.Body.Close()
+				s.Name, s.Description = manifest.Name, manifest.Description
+			}
+		}
+	}
+	return s
 }
 
-func extractBaseDomain(host string) (string, error) {
-	h, _, err := net.SplitHostPort(host)
-	if err != nil {
-		h = host
+// getServices returns the probed subdomains of domain, refreshing outdated parts of the cache.
+func getServices(domain string, refresh bool) cacheEntry {
+	// Base keeps the domain from escaping the cache directory.
+	file := filepath.Join("cache", filepath.Base(domain)+".json")
+	var e cacheEntry
+	if data, err := os.ReadFile(file); err == nil {
+		json.Unmarshal(data, &e)
 	}
-	parts := strings.Split(h, ".")
-	if len(parts) < 2 {
-		return "", fmt.Errorf("invalid host: %s", host)
+	if refresh || time.Since(e.FetchedAt) > ttl {
+		// On errors keep the cached list, crt.sh is flaky.
+		if services, err := fetchSubdomains(domain); err == nil {
+			e.FetchedAt, e.CheckedAt, e.Services = time.Now(), time.Time{}, services
+		}
 	}
-	base := strings.Join(parts[len(parts)-2:], ".")
-	return base, nil
+	if refresh || time.Since(e.CheckedAt) > checkTTL {
+		for i := range e.Services {
+			e.Services[i] = probe(e.Services[i])
+		}
+		e.CheckedAt = time.Now()
+	}
+	data, _ := json.Marshal(e)
+	os.MkdirAll("cache", 0o755)
+	os.WriteFile(file, data, 0o644)
+	return e
 }
 
 func apiHandler(w http.ResponseWriter, r *http.Request) {
-	host := r.URL.Query().Get("domain")
-	if host == "" {
-		// Fallback to Host header if no domain param
-		h := r.Host
-		if h == "" {
-			http.Error(w, "missing domain", http.StatusBadRequest)
-			return
-		}
-		var err error
-		host, err = extractBaseDomain(h)
-		if err != nil {
-			http.Error(w, "cannot determine domain", http.StatusBadRequest)
-			return
-		}
-	}
-
-	subs, err := getSubdomains(host)
-	if err != nil {
-		http.Error(w, "error fetching subdomains", http.StatusBadGateway)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	_ = json.NewEncoder(w).Encode(map[string]any{
-		"domain":     host,
-		"subdomains": subs,
-		"cached_ttl": ttl.String(),
+	e := getServices(strings.ToLower(r.URL.Query().Get("domain")), r.URL.Query().Has("refresh"))
+	json.NewEncoder(w).Encode(map[string]any{
+		"subdomains": e.Services,
+		"checked_at": e.CheckedAt,
 	})
 }
 
 func main() {
-	// Serve static files from ./static
-	staticFS, err := fs.Sub(embedFS, "static")
-	if err != nil {
-		panic(err)
-	}
+	staticFS, _ := fs.Sub(embedFS, "static")
 	http.Handle("/", http.FileServer(http.FS(staticFS)))
 	http.HandleFunc("/api/subdomains", apiHandler)
-
-	port := "8080"
-	fmt.Println("listening on :" + port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
-		fmt.Println(err)
-	}
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
-
-//go:embed static/*
-var embedFS embed.FS

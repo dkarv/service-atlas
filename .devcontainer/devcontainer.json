@@ -14,6 +14,13 @@
       }
     }
   },
-  "postCreateCommand": "go mod tidy",
+  "portsAttributes": {
+    "8080": {
+      "label": "Go application",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "postCreateCommand": "go mod download",
+  "postStartCommand": "go run .'",
   "remoteUser": "vscode"
 }

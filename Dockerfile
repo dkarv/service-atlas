@@ -1,12 +1,13 @@
 FROM golang:1.22-alpine AS builder
 WORKDIR /app
-COPY go.mod go.sum main.go ./
+COPY go.mod main.go ./
 COPY static ./static
-RUN go mod download && CGO_ENABLED=0 go build -o app -ldflags="-s -w" .
+RUN CGO_ENABLED=0 go build -o app -ldflags="-s -w" . && mkdir cache
 
-FROM alpine:3.21
-RUN apk --no-cache add ca-certificates
+# Static distroless image: CA certificates included, no shell, runs as nonroot
+FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /app
 COPY --from=builder /app/app .
+COPY --from=builder --chown=nonroot:nonroot /app/cache ./cache
 EXPOSE 8080
 CMD ["/app/app"]

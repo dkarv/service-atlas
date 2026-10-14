@@ -1,0 +1,62 @@
+name: Line count
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  line-count:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update line counts in README and check the 150 line limit
+        shell: python
+        run: |
+          import re, subprocess, sys
+
+          desc = {
+              "main.go": "Backend: crt.sh lookup, service checks, cache, API",
+              "static/main.js": "Frontend: loads, sorts and renders the services",
+              "static/index.html": "Page skeleton and card template",
+              "static/style.css": "Custom styles on top of Blades",
+              "static/blades.min.css": "Vendored Blades CSS (Pico fork)",
+              "Dockerfile": "Distroless container image",
+              "go.mod": "Go module definition",
+          }
+          files = subprocess.check_output(["git", "ls-files"], text=True).split()
+          lines = {f: open(f, "rb").read().count(b"\n") for f in files}
+          # The table skips hidden files and folders like .github, and Markdown docs.
+          listed = sorted((f for f in files if not re.search(r"(^|/)\.|\.md$", f)), key=lines.get, reverse=True)
+
+          unknown = [f for f in listed if f not in desc]
+          for f in unknown:
+              print(f"::error file={f}::Unknown file, add a description to .github/workflows/line-count.yml")
+          if unknown:
+              sys.exit(1)
+
+          rows = ["| File | Lines | Description |", "| --- | ---: | --- |"]
+          rows += [f"| `{f}` | {lines[f]} | {desc[f]} |" for f in listed]
+          rows += [f"| **Total** | **{sum(lines[f] for f in listed)}** | |"]
+          readme = open("README.md").read()
+          readme = re.sub(r"(?s)(<!-- loc:start -->\n).*?(<!-- loc:end -->)", lambda m: m[1] + "\n".join(rows) + "\n" + m[2], readme)
+          open("README.md", "w").write(readme)
+
+          too_long = [f for f in files if lines[f] > 150]
+          for f in too_long:
+              print(f"::error file={f}::{lines[f]} lines, the limit is 150")
+          sys.exit(1 if too_long else 0)
+
+      - name: Commit README
+        if: always()
+        run: |
+          git diff --quiet README.md && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "Update line counts in README"
+          git push

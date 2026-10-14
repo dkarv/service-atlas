@@ -1,0 +1,45 @@
+.services {
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  grid-auto-rows: 1fr;
+}
+
+.services h5 {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.services h5 a {
+  text-decoration: none;
+}
+
+.services h5 > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+header small {
+  font-size: 0.7rem;
+  color: var(--pico-muted-color);
+}
+
+header small a {
+  text-decoration: none;
+}
+
+.services h5 img {
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+}
+
+[data-service-description] {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  height: 2lh;
+}

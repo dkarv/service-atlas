@@ -1,21 +1,35 @@
 # service-atlas
 
-Minimal, stateless Go service that generates a service overview homepage from Certificate Transparency (CT) logs.
+Minimal service that generates a service overview homepage from Certificate Transparency (CT) logs.
 
-- Derives the base domain from the `Host` header (works behind reverse proxy with `*.yourdomain.com`).
-- Queries [crt.sh](https://crt.sh) for all subdomains of that domain.
-- Caches results in memory (configurable TTL).
-- Serves a static `index.html` that loads the subdomain list via `/api/subdomains`.
+## Philosophy
 
-No configuration files, no environment variables. Just run and access via your domain.
+With AI-assisted programming it has become easy to build large, complicated systems that nobody can maintain or keep a full overview of. This project is a fun counter initiative: every file stays at **150 lines or less**, including the docs, config and vendored CSS, so the whole project can still be read and verified by hand.
+
+<!-- loc:start -->
+| File | Lines | Description |
+| --- | ---: | --- |
+| `main.go` | 148 | Backend: crt.sh lookup, service checks, cache, API |
+| `static/blades.min.css` | 144 | Vendored Blades CSS (Pico fork) |
+| `static/main.js` | 76 | Frontend: loads, sorts and renders the services |
+| `static/style.css` | 45 | Custom styles on top of Blades |
+| `static/index.html` | 32 | Page skeleton and card template |
+| `Dockerfile` | 13 | Distroless container image |
+| `go.mod` | 3 | Go module definition |
+| **Total** | **461** | |
+<!-- loc:end -->
+
 
 ## Features
 
-- Automatic subdomain discovery via CT logs
-- In-memory caching (default: 12 hours)
-- Single binary, stateless, Docker-ready
-- Works with wildcard DNS + Caddy (or any reverse proxy)
+- Derives the base domain from the page's hostname (works behind reverse proxy with `*.yourdomain.com`).
+- Queries [crt.sh](https://crt.sh) for all subdomains of that domain.
+- Caches results in `./cache/<domain>.json` and refetches once they are older than 1 day.
+- Serves a static `index.html` that loads the subdomain list via `/api/subdomains`.
 - JSON API: `GET /api/subdomains?domain=yourdomain.com`
+
+No configuration files, no environment variables. Just run and access via your domain.
+
 
 ## Quickstart
 
@@ -32,59 +46,7 @@ Open `http://localhost:8080` in your browser.
 ### Docker
 
 ```bash
-docker build -t service-atlas .
-docker run --rm -p 8080:8080 service-atlas
+docker run --rm -p 8080:8080 -v service-atlas-cache:/app/cache ghcr.io/dkarv/service-atlas
 ```
 
-### With Caddy
-
-Example `Caddyfile`:
-
-```caddy
-*.yourdomain.com {
-    reverse_proxy service-atlas:8080
-}
-```
-
-Now visiting `https://services.yourdomain.com` (or any other subdomain) shows the overview for `yourdomain.com`.
-
-## API
-
-### `GET /api/subdomains`
-
-Query parameters:
-
-- `domain` (optional): base domain, e.g. `yourdomain.com`.
-  If omitted, the domain is derived from the `Host` header.
-
-Response:
-
-```json
-{
-  "domain": "yourdomain.com",
-  "subdomains": [
-    "api.yourdomain.com",
-    "services.yourdomain.com",
-    "www.yourdomain.com"
-  ],
-  "cached_ttl": "15m0s"
-}
-```
-
-## Project structure
-
-```text
-.
-├── main.go
-├── go.mod
-├── Dockerfile
-├── README.md
-├── .devcontainer
-│   └── devcontainer.json
-└── static
-    └── index.html
-```
-
-## License
-
-MIT
+Images are published to GHCR on every push to `main` (`:latest`) and for `v*` tags (`:1.2.3`, `:1.2`). To build locally instead: `docker build -t service-atlas .`
