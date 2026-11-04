@@ -1,0 +1,433 @@
+[
+ {
+  "name": "experiments/php-frankenphp",
+  "commit": "7c679ac",
+  "date": "2026-11-04",
+  "machine": "Ubuntu 26.04.1 LTS, kernel 7.0.0-1017-azure, 4 CPUs, 15.6 GB RAM, Docker 29.4.2",
+  "counts": {
+   "runs": 5,
+   "startupRuns": 30
+  },
+  "results": {
+   "diff": {
+    "hosts": 55,
+    "problems": [],
+    "output": {
+     "dead0.bench.test": {
+      "status": 0,
+      "error": true,
+      "name": null,
+      "description": null,
+      "favicon": null
+     },
+     "dead1.bench.test": {
+      "status": 0,
+      "error": true,
+      "name": null,
+      "description": null,
+      "favicon": null
+     },
+     "dead2.bench.test": {
+      "status": 0,
+      "error": true,
+      "name": null,
+      "description": null,
+      "favicon": null
+     },
+     "dead3.bench.test": {
+      "status": 0,
+      "error": true,
+      "name": null,
+      "description": null,
+      "favicon": null
+     },
+     "dead4.bench.test": {
+      "status": 0,
+      "error": true,
+      "name": null,
+      "description": null,
+      "favicon": null
+     },
+     "s0.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": "App s0.bench.test",
+      "description": "Grüße from s0.bench.test",
+      "favicon": "https://s0.bench.test/favicon.ico"
+     },
+     "s1.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": "App s1.bench.test",
+      "description": "Grüße from s1.bench.test",
+      "favicon": "https://s1.bench.test/a/b.png"
+     },
+     "s10.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": null
+     },
+     "s11.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://s11.bench.test/next/favicon.ico"
+     },
+     "s12.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": "App s12.bench.test",
+      "description": "Grüße from s12.bench.test",
+      "favicon": "https://s12.bench.test/a/b.png"
+     },
+     "s13.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": "App s13.bench.test",
+      "description": "Grüße from s13.bench.test",
+      "favicon": "https://s13.bench.test/up.png"
+     },
+     "s14.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://cdn.bench.test/i.ico"
+     },
+     "s15.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://abs.bench.test/x.svg"
+     },
+     "s16.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://s16.bench.test/i.png?a=1&b=2"
+     },
+     "s17.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://s17.bench.test/deep/er/my%20icon.png"
+     },
+     "s18.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": "App s18.bench.test",
+      "description": "Grüße from s18.bench.test",
+      "favicon": "https://s18.bench.test/next/?v=1"
+     },
+     "s19.bench.test": {
+      "status": 503,
+      "error": false,
+      "name": "App s19.bench.test",
+      "description": "Grüße from s19.bench.test",
+      "favicon": "data:image/png;base64,AAAA"
+     },
+     "s2.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://s2.bench.test/up.png"
+     },
+     "s20.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://s20.bench.test/touch.png"
+     },
+     "s21.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": null
+     },
+     "s22.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://s22.bench.test/favicon.ico"
+     },
+     "s23.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://s23.bench.test/a/b.png"
+     },
+     "s24.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": "App s24.bench.test",
+      "description": "Grüße from s24.bench.test",
+      "favicon": "https://s24.bench.test/deep/up.png"
+     },
+     "s25.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": "App s25.bench.test",
+      "description": "Grüße from s25.bench.test",
+      "favicon": "https://cdn.bench.test/i.ico"
+     },
+     "s26.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://abs.bench.test/x.svg"
+     },
+     "s27.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://s27.bench.test/i.png?a=1&b=2"
+     },
+     "s28.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://s28.bench.test/my%20icon.png"
+     },
+     "s29.bench.test": {
+      "status": 503,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://s29.bench.test?v=1"
+     },
+     "s3.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://cdn.bench.test/i.ico"
+     },
+     "s30.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": "App s30.bench.test",
+      "description": "Grüße from s30.bench.test",
+      "favicon": "data:image/png;base64,AAAA"
+     },
+     "s31.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": "App s31.bench.test",
+      "description": "Grüße from s31.bench.test",
+      "favicon": "https://s31.bench.test/deep/er/touch.png"
+     },
+     "s32.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": null
+     },
+     "s33.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://s33.bench.test/favicon.ico"
+     },
+     "s34.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://s34.bench.test/a/b.png"
+     },
+     "s35.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://s35.bench.test/up.png"
+     },
+     "s36.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": "App s36.bench.test",
+      "description": "Grüße from s36.bench.test",
+      "favicon": "https://cdn.bench.test/i.ico"
+     },
+     "s37.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": "App s37.bench.test",
+      "description": "Grüße from s37.bench.test",
+      "favicon": "https://abs.bench.test/x.svg"
+     },
+     "s38.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://s38.bench.test/deep/er/i.png?a=1&b=2"
+     },
+     "s39.bench.test": {
+      "status": 503,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://s39.bench.test/next/my%20icon.png"
+     },
+     "s4.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://abs.bench.test/x.svg"
+     },
+     "s40.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://s40.bench.test?v=1"
+     },
+     "s41.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "data:image/png;base64,AAAA"
+     },
+     "s42.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": "App s42.bench.test",
+      "description": "Grüße from s42.bench.test",
+      "favicon": "https://s42.bench.test/touch.png"
+     },
+     "s43.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": "App s43.bench.test",
+      "description": "Grüße from s43.bench.test",
+      "favicon": null
+     },
+     "s44.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://s44.bench.test/favicon.ico"
+     },
+     "s45.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://s45.bench.test/a/b.png"
+     },
+     "s46.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://s46.bench.test/up.png"
+     },
+     "s47.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://cdn.bench.test/i.ico"
+     },
+     "s48.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": "App s48.bench.test",
+      "description": "Grüße from s48.bench.test",
+      "favicon": "https://abs.bench.test/x.svg"
+     },
+     "s49.bench.test": {
+      "status": 503,
+      "error": false,
+      "name": "App s49.bench.test",
+      "description": "Grüße from s49.bench.test",
+      "favicon": "https://s49.bench.test/i.png?a=1&b=2"
+     },
+     "s5.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://s5.bench.test/i.png?a=1&b=2"
+     },
+     "s6.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": "App s6.bench.test",
+      "description": "Grüße from s6.bench.test",
+      "favicon": "https://s6.bench.test/my%20icon.png"
+     },
+     "s7.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": "App s7.bench.test",
+      "description": "Grüße from s7.bench.test",
+      "favicon": "https://s7.bench.test?v=1"
+     },
+     "s8.bench.test": {
+      "status": 200,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "data:image/png;base64,AAAA"
+     },
+     "s9.bench.test": {
+      "status": 503,
+      "error": false,
+      "name": null,
+      "description": null,
+      "favicon": "https://s9.bench.test/touch.png"
+     }
+    },
+    "differences": [],
+    "intended": []
+   },
+   "loc": {
+    "lines": 168,
+    "chars": 5991
+   },
+   "size": {
+    "gzipped": 72749558
+   },
+   "startup": {
+    "fromStart": 134.7147078203125
+   },
+   "load": {
+    "idle": 80.8671875,
+    "peak": 133.625,
+    "staticRps": 17610.26,
+    "apiRps": 3456.99
+   },
+   "build": {
+    "ms": 645.1373790000216,
+    "all": [
+     894.7755519999773,
+     607.3013159999973,
+     653.4387229999993,
+     645.1373790000216,
+     637.1054639999638
+    ]
+   }
+  }
+ }
+]
