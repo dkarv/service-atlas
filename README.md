@@ -55,3 +55,8 @@ docker run --rm -p 8080:8080 -v service-atlas-cache:/app/cache ghcr.io/dkarv/ser
 ```
 
 Images are published to GHCR on every push to `main` (`:latest`) and for `v*` tags (`:1.2.3`, `:1.2`). To build locally instead: `docker build -t service-atlas .`
+
+
+## Experiments
+
+`main` stays the Go version for self-hosting. The `experiments/*` branches port the same service to other languages and technologies, such as Kotlin on the JVM and as a GraalVM native image, to see what each choice costs. Every push to `main` or an experiment benchmarks it: image size, build time, startup, RAM, throughput and lines of code, with the same API output checked. See the [benchmark results](https://dkarv.github.io/service-atlas/) and the branch [`benchmark`](https://github.com/dkarv/service-atlas/tree/benchmark) for how they are measured.
