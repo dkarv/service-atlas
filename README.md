@@ -14,7 +14,7 @@ Latest results: [RESULTS.md](RESULTS.md).
 | RAM | From `/proc/1/status` of the service: `VmRSS` 3 s after the start and `VmHWM` (peak) after 5 full refreshes and the throughput tests. |
 | Throughput | `wrk` for 15 s on a static file (64 connections) and on the cached API (1 connection), each after a discarded 5 s warm-up. |
 | Code | Lines and non-whitespace characters of the `Dockerfile` and the files in `backend/`, except docs and hidden files. |
-| API output | Each implementation's `/api/subdomains` is compared field by field with `bench/expected.json`. Any difference, or a wrong status or content type, fails the run right after the `diff` phase. |
+| API output | Each implementation's `/api/subdomains` is compared field by field with `bench/expected.json`. Any difference that the branch doesn't list as intended, or a wrong status or content type, fails the run right after the `diff` phase. |
 
 The workload never touches the internet. `bench/mock.mjs` is an HTTPS mock of crt.sh with 20,000 certificates (7 MB of JSON) and of 50 sites of about 50 KB each, with all kinds of favicon and manifest links, redirects and error codes. 5 more hosts don't resolve.
 
@@ -44,9 +44,17 @@ By default the load and build phases run 5 times and each implementation starts 
   node -e 'console.log(JSON.stringify(JSON.parse(require("fs").readFileSync(0))[0].results.diff.output, null, 1))' > bench/expected.json
 ```
 
+A branch whose output differs on purpose, e.g. because its URL parser follows an older RFC, lists those differences in `.bench-differences.json` at its root. Each entry accepts exactly one value of one field of one host, `reason` is for the reader:
+
+```json
+[{ "host": "s2.bench.test", "field": "favicon", "value": "https://s2.bench.test/../up.png", "reason": "java.net.URI keeps ../ above the root" }]
+```
+
+Listed differences are kept in the JSON under `intended` and don't fail the run. An entry that no longer matches the output does, so the list stays current. As a hidden file it doesn't count as code.
+
 ## GitHub Actions
 
-The workflow `.github/workflows/benchmark.yml` on `main` (and on the branches created from it) benchmarks every push to `main` and `experiments/*`, but only the pushed branch. It shows the results on the summary page of the run and publishes them with `bench/publish.sh` on [GitHub Pages](https://dkarv.github.io/service-atlas/): the branch `gh-pages` keeps the latest results of each branch in `benchmark-data/<branch>.json`, and `index.html` puts them side by side in a table that sorts by any column. One row per branch, without the `experiments/` prefix: `main` comes first, and the percentages are relative to it. A branch whose API output differs fails its run and stays off the page.
+The workflow `.github/workflows/benchmark.yml` on `main` (and on the branches created from it) benchmarks every push to `main` and `experiments/*`, but only the pushed branch. It shows the results on the summary page of the run and publishes them with `bench/publish.sh` on [GitHub Pages](https://dkarv.github.io/service-atlas/): the branch `gh-pages` keeps the latest results of each branch in `benchmark-data/<branch>.json`, and `index.html` puts them side by side in a table that sorts by any column. One row per branch, without the `experiments/` prefix: `main` comes first, and the percentages are relative to it. A branch whose API output differs, other than listed in its `.bench-differences.json`, fails its run and stays off the page.
 
 - The first run creates the branch `gh-pages`. Then turn on Pages once: Settings, Pages, "Deploy from a branch", `gh-pages`, `/ (root)`.
 - The workflow only calls `run.sh`, `bench/markdown.mjs` and `bench/publish.sh` of this branch, so changes here need no change on the other branches. Branches created before the workflow need it merged or cherry-picked from `main`.
@@ -64,7 +72,7 @@ Create a branch `experiments/<language>-<technology>` from `main` and replace th
 5. Trust the CA certificates in the file named by `SSL_CERT_FILE` in addition to the default ones, as Go does. This is how it trusts the mock.
 6. Stop on SIGTERM, as `docker stop` sends it to PID 1.
 
-Settings such as heap limits belong in the image of the branch. To compare settings, use one branch per variant. The API output must match `bench/expected.json` exactly, otherwise the run fails and lists the differences in its error output.
+Settings such as heap limits belong in the image of the branch. To compare settings, use one branch per variant. The API output must match `bench/expected.json`, apart from the differences listed in `.bench-differences.json`, otherwise the run fails and lists the differences in its error output.
 
 ## Comparing fairly
 

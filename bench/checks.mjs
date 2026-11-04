@@ -40,9 +40,26 @@ export async function diff(impls) {
       problems.push(`API response is not valid JSON: ${e.message}`);
     }
     const sorted = Object.fromEntries(Object.keys(output).sort().map(host => [host, output[host]]));
-    results[impl.name] = { hosts: Object.keys(output).length, problems, differences: differences(sorted), output: sorted };
+    // Differences the branch lists as intended are only reported. A listed one that doesn't occur is a problem.
+    const accepted = intended(impl), found = differences(sorted);
+    const matches = (a, d) => a.host === d.host && a.field === d.field && a.value === d.value;
+    for (const a of accepted.filter(a => !found.some(d => matches(a, d)))) {
+      problems.push(`${INTENDED} lists ${a.host} ${a.field} ${JSON.stringify(a.value)}, but the output differs from that`);
+    }
+    results[impl.name] = {
+      hosts: Object.keys(output).length, problems, output: sorted,
+      differences: found.filter(d => !accepted.some(a => matches(a, d))),
+      intended: found.filter(d => accepted.some(a => matches(a, d))),
+    };
   }
   return results;
+}
+
+// Differences from EXPECTED that a branch accepts on purpose, see "Expected API output" in the README.
+const INTENDED = '.bench-differences.json';
+function intended(impl) {
+  if (!git('ls-tree', '--name-only', impl.ref, INTENDED).trim()) return [];
+  return JSON.parse(git('show', `${impl.ref}:${INTENDED}`));
 }
 
 function differences(output) {
@@ -56,7 +73,7 @@ function differences(output) {
   return found;
 }
 
-// Throws unless every implementation passed the HTTP contract and returned the expected API output.
+// Throws unless every implementation passed the HTTP contract and returned the expected or intended API output.
 export function verify(results) {
   const failed = Object.entries(results).flatMap(([name, { problems, differences }]) => [
     ...problems.map(p => `${name}: ${p}`),
