@@ -11,17 +11,17 @@ With AI-assisted programming it has become easy to build large, complicated syst
 <!-- loc:start -->
 | File | Lines | Description |
 | --- | ---: | --- |
-| **Backend** | **151** | |
-| `backend/main.go` | 148 | crt.sh lookup, service checks, cache, API |
+| **Backend** | **150** | |
+| `backend/main.go` | 147 | crt.sh lookup, service checks, cache, API |
 | `backend/go.mod` | 3 | Go module definition |
-| **Frontend** | **297** | |
+| **Frontend** | **291** | |
 | `frontend/blades.min.css` | 144 | Vendored Blades CSS (Pico fork) |
-| `frontend/main.js` | 76 | Loads, sorts and renders the services |
-| `frontend/style.css` | 45 | Custom styles on top of Blades |
+| `frontend/main.js` | 73 | Loads, sorts and renders the services |
+| `frontend/style.css` | 42 | Custom styles on top of Blades |
 | `frontend/index.html` | 32 | Page skeleton and card template |
 | **Dockerfile** | **13** | |
 | `Dockerfile` | 13 | Distroless container image |
-| **Total** | **461** | |
+| **Total** | **454** | |
 <!-- loc:end -->
 
 
