@@ -43,7 +43,9 @@ data class Service(
 )
 
 @Serializable
-data class CacheEntry(val fetchedAt: Instant = zeroTime, val checkedAt: Instant = zeroTime, val subdomains: List<Service> = emptyList())
+data class CacheEntry(
+    val fetchedAt: Instant = zeroTime, val checkedAt: Instant = zeroTime, val subdomains: List<Service> = emptyList(),
+)
 
 @Serializable
 data class Cert(val nameValue: String = "", val notBefore: String = "")
@@ -73,15 +75,19 @@ fun link(tag: Regex, page: Page): String? {
     val element = tag.find(page.body)?.value ?: return null
     val href = hrefRe.find(element)?.groupValues?.get(1) ?: return null
     val unescaped = htmlEntities.entries.fold(href) { text, (entity, char) -> text.replace(entity, char) }
-    // URI.resolve drops the slash before a relative path if the base URL has no path at all.
+    val ref = unescaped.trim().replace(" ", "%20")
+    // URI.resolve (RFC 2396) drops the last path segment for a bare ?query, Go (RFC 3986) only replaces the query.
+    val query = page.url.toString().substringBefore('?') + ref
+    if (ref.startsWith('?')) return runCatching { URI(query).toString() }.getOrNull()
+    // URI.resolve also drops the slash before a relative path if the base URL has no path at all.
     val base = if (page.url.rawPath.isEmpty()) page.url.resolve("/") else page.url
-    return runCatching { base.resolve(unescaped.trim().replace(" ", "%20")).toString() }.getOrNull()
+    return runCatching { base.resolve(ref).toString() }.getOrNull()
 }
 
 /** Requests https://host and extracts its favicon and the name and description of its web app manifest. */
 fun probe(service: Service): Service {
     val page = try {
-        fetch("https://${service.host}/", probeTimeout) {
+        fetch("https://${service.host}", probeTimeout) {
             Page(it.statusCode(), it.uri(), it.body().readNBytes(MAX_BODY_SIZE).decodeToString())
         }
     } catch (e: Exception) {

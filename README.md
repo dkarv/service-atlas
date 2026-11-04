@@ -75,7 +75,7 @@ The image contains a static musl binary on `distroless/static`. The published `g
 
 The JSON API returns the same results, apart from these details:
 
-- Favicon links are resolved with `java.net.URI` (RFC 2396). `../` above the root is kept and a bare `?v=1` href drops the last path segment.
+- Favicon links are resolved with `java.net.URI` (RFC 2396). `../` above the root is kept.
 - Only `&amp; &lt; &gt; &quot; &#39;` are unescaped in links, Go handles every HTML entity.
 - An empty list is `[]` instead of `null`, and the API sends `application/json` instead of `text/plain`.
 - A site that stalls after its headers shows as unreachable instead of showing its status.
