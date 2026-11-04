@@ -46,7 +46,7 @@ No configuration files, no environment variables. Just run and access via your d
 python3 backend/main.py
 ```
 
-Needs Python 3.8 or newer. There is nothing to install or build: the server serves `frontend/` next to `backend/` and keeps the cache in `cache/` in the working directory.
+Needs Python 3.11 or newer. There is nothing to install or build: the server serves `frontend/` next to `backend/` and keeps the cache in `cache/` in the working directory.
 
 Open `http://localhost:8080` in your browser.
 

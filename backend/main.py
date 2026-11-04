@@ -1,11 +1,12 @@
 # service-atlas in Python: crt.sh lookup, service checks, cache, API and the static frontend. Only the standard library.
-import json, os, re, signal, sys, time
+import json, os, re, signal, ssl, sys, time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import suppress
 from datetime import datetime, timezone
-from functools import partial
 from html import unescape
-from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from mimetypes import guess_type
+from pathlib import Path
 from string import punctuation
 from urllib.error import HTTPError
 from urllib.parse import parse_qs, quote, urljoin, urlsplit
@@ -15,13 +16,16 @@ TTL, CHECK_TTL = 24 * 3600, 3600  # subdomain list from crt.sh, probe results
 MANIFEST_RE = re.compile(r"""<link[^>]+rel=["']?manifest["']?[^>]*>""", re.I | re.S)
 ICON_RE = re.compile(r"""<link[^>]+rel=["'][^"']*icon[^"']*["'][^>]*>""", re.I | re.S)
 HREF_RE = re.compile(r"""href=["']([^"']+)["']""", re.I | re.S)
-FRONTEND = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "frontend")
+CTX = ssl.create_default_context()  # shared, urlopen would load the CA certificates again for every connection
+# The frontend is read once at startup, so only these files can be served.
+FILES = {"/" + f.name: (f.read_bytes(), guess_type(f.name)[0]) for f in (Path(__file__).parent.parent / "frontend").iterdir()}
+FILES["/"] = FILES["/index.html"]
 
 
 def get(url, timeout, limit=-1):
     """GET url, following redirects. Returns the response and at most limit bytes of the body, also for 4xx and 5xx."""
     try:
-        r = urlopen(url, timeout=timeout)
+        r = urlopen(url, timeout=timeout, context=CTX)
     except HTTPError as e:
         r = e
     with r:
@@ -57,26 +61,22 @@ def probe(s):
     s["favicon"] = link(ICON_RE, body, r.url)
     if url := link(MANIFEST_RE, body, r.url):
         with suppress(Exception):  # a failed manifest only loses the manifest
-            r, data = get(url, 5)
-            if r.status < 400:
-                # Go matches JSON keys case-insensitively and leaves fields of other types empty.
-                manifest = {k.lower(): v for k, v in json.loads(data).items() if isinstance(v, str)}
-                s["name"], s["description"] = manifest.get("name"), manifest.get("description")
+            # Go matches JSON keys case-insensitively and leaves fields of other types empty.
+            manifest = json.loads(urlopen(url, timeout=5, context=CTX).read())
+            manifest = {k.lower(): v for k, v in manifest.items() if isinstance(v, str)}
+            s["name"], s["description"] = manifest.get("name"), manifest.get("description")
     return {k: v for k, v in s.items() if v not in (None, "")}  # like Go's omitempty
 
 
-def old(timestamp, ttl):
-    try:
-        return time.time() - datetime.fromisoformat(timestamp).timestamp() > ttl
-    except (TypeError, ValueError):
-        return True
+def old(timestamp, ttl):  # a missing timestamp is Go's zero time
+    return time.time() - datetime.fromisoformat(timestamp or "0001-01-01T00:00:00Z").timestamp() > ttl
 
 
 def get_services(domain, refresh):
     """Returns the probed subdomains of domain, refreshing outdated parts of the cache."""
     # basename keeps the domain from escaping the cache directory.
     file = os.path.join("cache", os.path.basename(domain) + ".json")
-    e = {"fetched_at": "0001-01-01T00:00:00Z", "checked_at": None, "subdomains": []}
+    e = {"fetched_at": "0001-01-01T00:00:00Z", "subdomains": []}
     with suppress(OSError, ValueError):
         with open(file) as f:
             e = json.load(f)
@@ -86,7 +86,7 @@ def get_services(domain, refresh):
             e = {"fetched_at": datetime.now(timezone.utc).isoformat(), "checked_at": None, "subdomains": fetch_subdomains(domain)}
     if refresh or old(e.get("checked_at"), CHECK_TTL):
         with ThreadPoolExecutor(64) as pool:
-            e["subdomains"] = list(pool.map(probe, e.get("subdomains") or []))
+            e["subdomains"] = list(pool.map(probe, e["subdomains"]))
         e["checked_at"] = datetime.now(timezone.utc).isoformat()
         with suppress(OSError):
             os.makedirs("cache", exist_ok=True)
@@ -95,25 +95,26 @@ def get_services(domain, refresh):
     return e
 
 
-class Handler(SimpleHTTPRequestHandler):
+class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"  # keep-alive, every response has a Content-Length
+    log_message = lambda *_: None  # no access log, like Go
 
     def do_GET(self):
         url = urlsplit(self.path)
-        if url.path != "/api/subdomains":
-            return super().do_GET()
-        q = parse_qs(url.query, keep_blank_values=True)
-        body = json.dumps(get_services(q.get("domain", [""])[0].lower(), "refresh" in q)).encode()
+        if url.path == "/api/subdomains":
+            q = parse_qs(url.query, keep_blank_values=True)
+            body, type = json.dumps(get_services(q.get("domain", [""])[0].lower(), "refresh" in q)).encode(), "application/json"
+        elif url.path in FILES:
+            body, type = FILES[url.path]
+        else:
+            return self.send_error(404)
         self.send_response(200)
-        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Type", type)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
 
-    def log_message(self, *args):  # no access log, like Go
-        pass
-
 
 # As PID 1 in a container Python gets no default handler for SIGTERM.
 signal.signal(signal.SIGTERM, lambda *_: sys.exit())
-ThreadingHTTPServer(("", 8080), partial(Handler, directory=FRONTEND)).serve_forever()
+ThreadingHTTPServer(("", 8080), Handler).serve_forever()
