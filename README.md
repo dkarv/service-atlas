@@ -14,15 +14,16 @@ With AI-assisted programming it has become easy to build large, complicated syst
 | File | Lines | Description |
 | --- | ---: | --- |
 | `static/blades.min.css` | 144 | Vendored Blades CSS (Pico fork) |
-| `src/main/kotlin/Services.kt` | 138 | Backend: crt.sh lookup, service checks, cache |
+| `src/main/kotlin/Services.kt` | 130 | Backend: crt.sh lookup, probing, cache |
 | `static/main.js` | 76 | Frontend: loads, sorts and renders the services |
-| `src/main/kotlin/Main.kt` | 74 | Backend: HTTP server, API, static files |
+| `src/main/kotlin/Http.kt` | 56 | Backend: HTTP client with timeouts and TLS trust |
+| `src/main/kotlin/Main.kt` | 55 | Backend: HTTP server, API, static files |
 | `static/style.css` | 45 | Custom styles on top of Blades |
 | `static/index.html` | 32 | Page skeleton and card template |
 | `Dockerfile` | 23 | Native image build, distroless container image |
 | `build.gradle.kts` | 14 | Gradle build definition |
 | `settings.gradle.kts` | 1 | Gradle project name |
-| **Total** | **547** | |
+| **Total** | **576** | |
 <!-- loc:end -->
 
 

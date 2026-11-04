@@ -20,8 +20,9 @@ jobs:
           import re, subprocess, sys
 
           desc = {
-              "src/main/kotlin/Services.kt": "Backend: crt.sh lookup, service checks, cache",
+              "src/main/kotlin/Services.kt": "Backend: crt.sh lookup, probing, cache",
               "src/main/kotlin/Main.kt": "Backend: HTTP server, API, static files",
+              "src/main/kotlin/Http.kt": "Backend: HTTP client with timeouts and TLS trust",
               "static/main.js": "Frontend: loads, sorts and renders the services",
               "static/index.html": "Page skeleton and card template",
               "static/style.css": "Custom styles on top of Blades",

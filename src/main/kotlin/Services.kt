@@ -1,37 +1,37 @@
+@file:OptIn(ExperimentalSerializationApi::class)
+
 import java.io.File
-import java.io.InputStream
 import java.net.URI
 import java.net.URLEncoder
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
-import java.net.http.HttpResponse.BodyHandlers
-import java.time.Duration
-import java.util.concurrent.Callable
-import java.util.concurrent.ExecutionException
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
-import kotlin.time.toKotlinDuration
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
 
-val ttl = Duration.ofHours(24) // subdomain list from crt.sh
-val checkTtl = Duration.ofHours(1) // probe results
-val probeTimeout: Duration = Duration.ofSeconds(5)
+// Cache and limits
+val ttl = 24.hours // subdomain list from crt.sh
+val checkTtl = 1.hours // probe results
+val crtShTimeout = 20.seconds
+val probeTimeout = 5.seconds
+const val MAX_BODY_SIZE = 1 shl 20 // read of a probed page, 1 MiB
+/** Go's zero time, so cache files stay compatible with the Go version. */
 val zeroTime = Instant.parse("0001-01-01T00:00:00Z")
-val flags = setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
-val manifestRe = Regex("""<link[^>]+rel=["']?manifest["']?[^>]*>""", flags)
-val iconRe = Regex("""<link[^>]+rel=["'][^"']*icon[^"']*["'][^>]*>""", flags)
-val hrefRe = Regex("""href=["']([^"']+)["']""", flags)
-val entities = mapOf("&amp;" to "&", "&lt;" to "<", "&gt;" to ">", "&quot;" to "\"", "&#39;" to "'")
-val tasks = Executors.newVirtualThreadPerTaskExecutor()
-val client: HttpClient = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS).executor(tasks)
-    .sslContext(sslContext()).build()
+
+// HTML parsing
+val htmlRegexOptions = setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+val manifestRe = Regex("""<link[^>]+rel=["']?manifest["']?[^>]*>""", htmlRegexOptions)
+val iconRe = Regex("""<link[^>]+rel=["'][^"']*icon[^"']*["'][^>]*>""", htmlRegexOptions)
+val hrefRe = Regex("""href=["']([^"']+)["']""", htmlRegexOptions)
+val htmlEntities = mapOf("&amp;" to "&", "&lt;" to "<", "&gt;" to ">", "&quot;" to "\"", "&#39;" to "'")
+val whitespace = Regex("\\s+")
+
+// JSON
 val json = Json { ignoreUnknownKeys = true; explicitNulls = false; coerceInputValues = true; encodeDefaults = true }
 
 @Serializable
@@ -53,36 +53,24 @@ data class CacheEntry(
 )
 
 @Serializable
-data class Cert(@SerialName("name_value") val nameValue: String = "", @SerialName("not_before") val notBefore: String = "")
+data class Cert(
+    @SerialName("name_value") val nameValue: String = "",
+    @SerialName("not_before") val notBefore: String = "",
+)
 
 @Serializable
 data class Manifest(val name: String? = null, val description: String? = null)
 
-// fetch requests url and hands the response to read. It runs as a task because HttpRequest.timeout ends at the headers.
-fun <T> fetch(url: String, timeout: Duration, read: (HttpResponse<InputStream>) -> T): T {
-    val task = tasks.submit(Callable {
-        val response = client.send(HttpRequest.newBuilder(URI(url)).build(), BodyHandlers.ofInputStream())
-        response.body().use { read(response) }
-    })
-    try {
-        return task.get(timeout.toMillis(), TimeUnit.MILLISECONDS)
-    } catch (e: ExecutionException) {
-        throw e.cause ?: e
-    } finally {
-        task.cancel(true)
-    }
-}
+/** The start of a probed page and the URL it came from, which differs from the requested one after redirects. */
+class Page(val status: Int, val url: URI, val body: String)
 
-// fetchSubdomains lists the subdomains in the CT logs with the date of their latest certificate.
-@OptIn(ExperimentalSerializationApi::class)
+/** Lists the subdomains in the CT logs with the date of their latest certificate. */
 fun fetchSubdomains(domain: String): List<Service> {
-    val query = URLEncoder.encode("%.$domain", Charsets.UTF_8)
-    val certs = fetch("https://crt.sh/?output=json&q=$query", Duration.ofSeconds(20)) {
-        json.decodeFromStream<List<Cert>>(it.body())
-    }
+    val url = "https://crt.sh/?output=json&q=" + URLEncoder.encode("%.$domain", Charsets.UTF_8)
+    val certs = fetch(url, crtShTimeout) { json.decodeFromStream<List<Cert>>(it.body()) }
     val latest = HashMap<String, String>()
     for (cert in certs) {
-        for (name in cert.nameValue.lowercase().split(Regex("\\s+"))) {
+        for (name in cert.nameValue.lowercase().split(whitespace)) {
             // ISO timestamps compare as strings.
             if (name.endsWith(".$domain") && !name.startsWith("*") && cert.notBefore > latest[name].orEmpty()) {
                 latest[name] = cert.notBefore
@@ -92,47 +80,51 @@ fun fetchSubdomains(domain: String): List<Service> {
     return latest.map { (host, issued) -> Service(host, issued) }
 }
 
-// link resolves the href of the first tag matching re against the final URL of a possibly redirected request.
-fun link(re: Regex, body: String, base: URI): String? {
-    val href = hrefRe.find(re.find(body)?.value ?: return null)?.groupValues?.get(1) ?: return null
-    val unescaped = entities.entries.fold(href) { text, (entity, char) -> text.replace(entity, char) }
-    val root = if (base.rawPath.isEmpty()) base.resolve("/") else base // URI.resolve drops the slash otherwise
-    return runCatching { root.resolve(unescaped.trim().replace(" ", "%20")).toString() }.getOrNull()
+/** Resolves the href of the first tag matching [tag] in the page against the URL of the page. */
+fun link(tag: Regex, page: Page): String? {
+    val element = tag.find(page.body)?.value ?: return null
+    val href = hrefRe.find(element)?.groupValues?.get(1) ?: return null
+    val unescaped = htmlEntities.entries.fold(href) { text, (entity, char) -> text.replace(entity, char) }
+    // URI.resolve drops the slash before a relative path if the base URL has no path at all.
+    val base = if (page.url.rawPath.isEmpty()) page.url.resolve("/") else page.url
+    return runCatching { base.resolve(unescaped.trim().replace(" ", "%20")).toString() }.getOrNull()
 }
 
-// probe requests https://host and extracts its favicon and web app manifest name and description.
-@OptIn(ExperimentalSerializationApi::class)
-fun probe(s: Service): Service = try {
-    val (status, base, body) = fetch("https://${s.host}/", probeTimeout) {
-        Triple(it.statusCode(), it.uri(), it.body().readNBytes(1 shl 20).decodeToString())
+/** Requests https://host and extracts its favicon and the name and description of its web app manifest. */
+fun probe(service: Service): Service {
+    val page = try {
+        fetch("https://${service.host}/", probeTimeout) {
+            Page(it.statusCode(), it.uri(), it.body().readNBytes(MAX_BODY_SIZE).decodeToString())
+        }
+    } catch (e: Exception) {
+        return Service(service.host, service.issued, error = e.message ?: e.toString())
     }
-    val manifest = link(manifestRe, body, base)?.let { url ->
+    val manifest = link(manifestRe, page)?.let { url ->
         runCatching { fetch(url, probeTimeout) { json.decodeFromStream<Manifest>(it.body()) } }.getOrNull()
     }
-    Service(
-        s.host, s.issued, status,
+    return Service(
+        service.host, service.issued, page.status,
         name = manifest?.name?.ifEmpty { null },
         description = manifest?.description?.ifEmpty { null },
-        favicon = link(iconRe, body, base),
+        favicon = link(iconRe, page),
     )
-} catch (e: Exception) {
-    Service(s.host, s.issued, error = e.message ?: e.toString())
 }
 
-fun expired(time: Instant, maxAge: Duration) = Clock.System.now() - time > maxAge.toKotlinDuration()
+fun expired(time: Instant, maxAge: Duration) = Clock.System.now() - time > maxAge
 
-// getServices returns the probed subdomains of domain, refreshing outdated parts of the cache.
+/** Returns the probed subdomains of [domain], refreshing outdated parts of the cache. */
 fun getServices(domain: String, refresh: Boolean): CacheEntry {
-    // Only the last path segment, which keeps the domain from escaping the cache directory.
-    val file = File("cache", domain.trimEnd('/').substringAfterLast('/').ifEmpty { "." } + ".json")
-    var e = runCatching { json.decodeFromString<CacheEntry>(file.readText()) }.getOrDefault(CacheEntry())
-    if (refresh || expired(e.fetchedAt, ttl)) {
+    // Only the last path segment of the domain, so it can't escape the cache directory.
+    val name = domain.trimEnd('/').substringAfterLast('/').ifEmpty { "." }
+    val file = File("cache", "$name.json")
+    var entry = runCatching { json.decodeFromString<CacheEntry>(file.readText()) }.getOrDefault(CacheEntry())
+    if (refresh || expired(entry.fetchedAt, ttl)) {
         // On errors keep the cached list, crt.sh is flaky.
-        runCatching { fetchSubdomains(domain) }.onSuccess { e = CacheEntry(Clock.System.now(), zeroTime, it) }
+        runCatching { fetchSubdomains(domain) }.onSuccess { entry = CacheEntry(Clock.System.now(), zeroTime, it) }
     }
-    if (refresh || expired(e.checkedAt, checkTtl)) {
-        e = e.copy(services = e.services.map(::probe), checkedAt = Clock.System.now())
+    if (refresh || expired(entry.checkedAt, checkTtl)) {
+        entry = entry.copy(services = entry.services.map(::probe), checkedAt = Clock.System.now())
     }
-    runCatching { File("cache").mkdirs(); file.writeText(json.encodeToString(e)) }
-    return e
+    runCatching { File("cache").mkdirs(); file.writeText(json.encodeToString(entry)) }
+    return entry
 }

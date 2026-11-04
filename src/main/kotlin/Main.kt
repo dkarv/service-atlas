@@ -1,14 +1,8 @@
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
-import java.io.File
 import java.net.InetSocketAddress
 import java.net.URI
 import java.net.URLDecoder
-import java.security.KeyStore
-import java.security.cert.CertificateFactory
-import javax.net.ssl.SSLContext
-import javax.net.ssl.TrustManagerFactory
-import javax.net.ssl.X509TrustManager
 import kotlin.time.Instant
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -32,7 +26,7 @@ fun respond(ex: HttpExchange, status: Int, type: String, body: ByteArray) {
     ex.close()
 }
 
-// query decodes the URL query, skipping malformed pairs. Like in Go the first value of a key wins.
+/** Decodes the URL query, skipping malformed pairs. Like in Go, the first value of a key wins. */
 fun query(uri: URI): Map<String, String> = uri.rawQuery.orEmpty().split('&').asReversed().mapNotNull { pair ->
     runCatching {
         val (key, value) = listOf(pair.substringBefore('='), pair.substringAfter('=', ""))
@@ -44,26 +38,13 @@ fun handle(ex: HttpExchange) {
     val path = ex.requestURI.path
     if (path == "/api/subdomains") {
         val params = query(ex.requestURI)
-        val e = getServices(params["domain"].orEmpty().lowercase(), "refresh" in params)
-        val body = json.encodeToString(ApiResponse(e.services, e.checkedAt)).toByteArray()
+        val entry = getServices(params["domain"].orEmpty().lowercase(), "refresh" in params)
+        val body = json.encodeToString(ApiResponse(entry.services, entry.checkedAt)).toByteArray()
         return respond(ex, 200, "application/json", body)
     }
     val asset = assets[if (path == "/") "/index.html" else path]
     if (asset != null) respond(ex, 200, asset.type, asset.body)
     else respond(ex, 404, "text/plain; charset=utf-8", "404 page not found\n".toByteArray())
-}
-
-fun trustManagers(store: KeyStore?) =
-    TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()).apply { init(store) }.trustManagers
-
-// sslContext also trusts the CA certificates in SSL_CERT_FILE, e.g. of a private CA. Go does the same on Linux.
-fun sslContext(): SSLContext {
-    val file = System.getenv("SSL_CERT_FILE") ?: return SSLContext.getDefault()
-    val defaults = trustManagers(null).filterIsInstance<X509TrustManager>().flatMap { it.acceptedIssuers.asList() }
-    val extra = File(file).inputStream().use { CertificateFactory.getInstance("X.509").generateCertificates(it) }
-    val store = KeyStore.getInstance(KeyStore.getDefaultType()).apply { load(null) }
-    (defaults + extra).forEachIndexed { i, cert -> store.setCertificateEntry("ca$i", cert) }
-    return SSLContext.getInstance("TLS").apply { init(null, trustManagers(store), null) }
 }
 
 fun main() {
