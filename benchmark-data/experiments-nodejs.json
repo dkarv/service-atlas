@@ -1,9 +1,9 @@
 [
  {
   "name": "experiments/nodejs",
-  "commit": "b7ca2e9",
+  "commit": "a091cfb",
   "date": "2026-11-04",
-  "machine": "Ubuntu 26.04.1 LTS, kernel 7.0.0-1019-azure, 4 CPUs, 15.6 GB RAM, Docker 29.4.2",
+  "machine": "Ubuntu 26.04.1 LTS, kernel 7.0.0-1017-azure, 4 CPUs, 15.6 GB RAM, Docker 29.4.2",
   "counts": {
    "runs": 5,
    "startupRuns": 30
@@ -403,29 +403,29 @@
     "intended": []
    },
    "loc": {
-    "lines": 158,
-    "chars": 6213
+    "lines": 149,
+    "chars": 6192
    },
    "size": {
-    "gzipped": 62227904
+    "gzipped": 62227947
    },
    "startup": {
-    "fromStart": 179.6587670625
+    "fromStart": 148.68767803125002
    },
    "load": {
-    "idle": 67.18359375,
-    "peak": 233.0234375,
-    "staticRps": 13592.79,
-    "apiRps": 3097.85
+    "idle": 67.19921875,
+    "peak": 209.8359375,
+    "staticRps": 21736.09,
+    "apiRps": 4343.72
    },
    "build": {
-    "ms": 533.2499419999949,
+    "ms": 487.6202120000089,
     "all": [
-     583.567830999993,
-     559.2129880000139,
-     525.2102770000056,
-     530.636771999998,
-     533.2499419999949
+     543.1877800000075,
+     487.6202120000089,
+     547.7516250000044,
+     464.34518299999763,
+     485.69081000000006
     ]
    }
   }
