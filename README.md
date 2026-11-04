@@ -13,8 +13,8 @@ With AI-assisted programming it has become easy to build large, complicated syst
 <!-- loc:start -->
 | File | Lines | Description |
 | --- | ---: | --- |
-| **Backend** | **222** | |
-| `backend/src/main/kotlin/Services.kt` | 119 | crt.sh lookup, probing, cache |
+| **Backend** | **228** | |
+| `backend/src/main/kotlin/Services.kt` | 125 | crt.sh lookup, probing, cache |
 | `backend/src/main/kotlin/Http.kt` | 46 | HTTP client with timeouts and TLS trust |
 | `backend/src/main/kotlin/Main.kt` | 42 | HTTP server, API, static files |
 | `backend/build.gradle.kts` | 14 | Gradle build definition |
@@ -26,7 +26,7 @@ With AI-assisted programming it has become easy to build large, complicated syst
 | `frontend/index.html` | 32 | Page skeleton and card template |
 | **Dockerfile** | **15** | |
 | `Dockerfile` | 15 | JVM container image |
-| **Total** | **528** | |
+| **Total** | **534** | |
 <!-- loc:end -->
 
 
@@ -67,7 +67,7 @@ The image runs the jars on `eclipse-temurin:25-jre-alpine` with the default JVM 
 
 The JSON API returns the same results, apart from these details:
 
-- Favicon links are resolved with `java.net.URI` (RFC 2396). `../` above the root is kept and a bare `?v=1` href drops the last path segment.
+- Favicon links are resolved with `java.net.URI` (RFC 2396). `../` above the root is kept.
 - Only `&amp; &lt; &gt; &quot; &#39;` are unescaped in links, Go handles every HTML entity.
 - An empty list is `[]` instead of `null`, and the API sends `application/json` instead of `text/plain`.
 - A site that stalls after its headers shows as unreachable instead of showing its status.
