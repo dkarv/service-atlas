@@ -76,6 +76,11 @@ function wrk(args) {
 
 // Per run and implementation: 3 s idle, 5 full refreshes, 15 s static file, 15 s cached API.
 // The API gets a single connection: implementations may rewrite their cache per request, like the Go original.
+// Each throughput test follows a discarded 5 s pass, so JIT compilers measure warm. RAM peak includes it.
+function warmWrk(flags, url) {
+  wrk([...flags, '-d5s', url]);
+  return wrk([...flags, '-d15s', url]);
+}
 export async function load(impls, { runs }) {
   const samples = Object.fromEntries(impls.map(impl => [impl.name, []]));
   for (let i = 1; i <= runs; i++) {
@@ -89,8 +94,8 @@ export async function load(impls, { runs }) {
         const res = await get(`${base}/api/subdomains?domain=bench.test&refresh=1`, 300000);
         if (res?.status !== 200) throw new Error(`${impl.name}: refresh failed with ${res?.status}`);
       }
-      const statics = wrk(['-t4', '-c64', '-d15s', `${base}/blades.min.css`]);
-      const api = wrk(['-t1', '-c1', '-d15s', `${base}/api/subdomains?domain=bench.test`]);
+      const statics = warmWrk(['-t4', '-c64'], `${base}/blades.min.css`);
+      const api = warmWrk(['-t1', '-c1'], `${base}/api/subdomains?domain=bench.test`);
       samples[impl.name].push({ idle, peak: memory().VmHWM, staticRps: statics.rps, apiRps: api.rps });
       rm(APP, PROBE);
     }

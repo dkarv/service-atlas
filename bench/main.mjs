@@ -12,8 +12,8 @@ Builds the Dockerfile at the root of each git REF (branch, tag or commit) and co
 Without REFs: main and all experiments/* branches, local or on origin. Percentages are relative to the first REF.
 
 Options:
-  --runs N           runs of the load and build phases (default 3)
-  --startup-runs N   container starts per implementation (default 20)
+  --runs N           runs of the load and build phases (default 5)
+  --startup-runs N   container starts per implementation (default 30)
   --phases LIST      comma separated, default: ${Object.keys(PHASES).join(',')}
   --json             write the results as JSON instead of Markdown, for bench/markdown.mjs and bench/pages.mjs
   -h, --help         show this help`;
@@ -28,8 +28,8 @@ try {
   ({ values: opts, positionals } = parseArgs({
     allowPositionals: true,
     options: {
-      runs: { type: 'string', default: '3' },
-      'startup-runs': { type: 'string', default: '20' },
+      runs: { type: 'string', default: '5' },
+      'startup-runs': { type: 'string', default: '30' },
       phases: { type: 'string', default: Object.keys(PHASES).join(',') },
       json: { type: 'boolean' },
       help: { type: 'boolean', short: 'h' },

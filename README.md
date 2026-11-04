@@ -12,7 +12,7 @@ Latest results: [RESULTS.md](RESULTS.md).
 | Build time | `docker build --no-cache` with the base images already pulled, dependencies are downloaded every time. |
 | Startup | From the start of the process (`.State.StartedAt`) until the first 200 on `/`. |
 | RAM | From `/proc/1/status` of the service: `VmRSS` 3 s after the start and `VmHWM` (peak) after 5 full refreshes and the throughput tests. |
-| Throughput | `wrk` for 15 s on a static file (64 connections) and on the cached API (1 connection). |
+| Throughput | `wrk` for 15 s on a static file (64 connections) and on the cached API (1 connection), each after a discarded 5 s warm-up. |
 | Code | Lines and non-whitespace characters of the `Dockerfile` and the files in `backend/`, except docs and hidden files. |
 | API output | Each implementation's `/api/subdomains` is compared field by field with `bench/expected.json`. Any difference, or a wrong status or content type, fails the run right after the `diff` phase. |
 
@@ -31,7 +31,7 @@ git fetch origin
 ./run.sh --phases diff,size --runs 1  # quick check, see ./run.sh --help
 ```
 
-A full run of three implementations takes about 12 minutes on 16 CPUs. Progress goes to stderr, the Markdown report to stdout. With `--json`, the results go to stdout as JSON instead, `node bench/markdown.mjs FILE...` renders the JSON of separate runs as one report, and `node bench/pages.mjs FILE...` as the HTML page.
+By default the load and build phases run 5 times and each implementation starts 30 times. A full run of three implementations took about 12 minutes on 16 CPUs with 3 runs and no warm-up; expect roughly 20 minutes now, and more on a 4 CPU GitHub runner. Progress goes to stderr, the Markdown report to stdout. With `--json`, the results go to stdout as JSON instead, `node bench/markdown.mjs FILE...` renders the JSON of separate runs as one report, and `node bench/pages.mjs FILE...` as the HTML page.
 
 `run.sh` builds a tools image (`Dockerfile`) and starts it with the Docker socket mounted, so it can build and run the other containers. Mounting the socket gives that container full control of Docker, as with any tool that drives Docker. The repository is mounted read-only to read the branches with `git archive`. Docker objects are named `sa-bench-*` and removed at the end, so only one run can happen at a time.
 
