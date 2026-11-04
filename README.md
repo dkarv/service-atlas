@@ -13,13 +13,13 @@ With AI-assisted programming it has become easy to build large, complicated syst
 <!-- loc:start -->
 | File | Lines | Description |
 | --- | ---: | --- |
-| **Backend** | **158** | |
-| `backend/api.php` | 141 | crt.sh lookup, service checks, cache, API |
+| **Backend** | **164** | |
+| `backend/api.php` | 147 | crt.sh lookup, service checks, cache, API |
 | `backend/Caddyfile` | 17 | FrankenPHP routes: API and static files |
-| **Frontend** | **297** | |
+| **Frontend** | **291** | |
 | `frontend/blades.min.css` | 144 | Vendored Blades CSS (Pico fork) |
-| `frontend/main.js` | 76 | Loads, sorts and renders the services |
-| `frontend/style.css` | 45 | Custom styles on top of Blades |
+| `frontend/main.js` | 73 | Loads, sorts and renders the services |
+| `frontend/style.css` | 42 | Custom styles on top of Blades |
 | `frontend/index.html` | 32 | Page skeleton and card template |
 | **Dockerfile** | **10** | |
 | `Dockerfile` | 10 | FrankenPHP container image |

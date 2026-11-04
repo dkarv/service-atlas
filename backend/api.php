@@ -11,61 +11,60 @@ const ICON_RE = '/<link[^>]+rel=["\'][^"\']*icon[^"\']*["\'][^>]*>/is';
 const HREF_RE = '/href=["\']([^"\']+)["\']/is';
 const JSON_FLAGS = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE;
 
-/** GET $url, following redirects. Returns [status, body, final URL] and keeps at most $limit bytes of the body. */
-function fetch(string $url, int $timeout, int $limit = PHP_INT_MAX): array
+/** GETs all $urls at once, following redirects. Returns [status, body, final URL] or the RuntimeException of a failed
+ * request for each URL, and keeps at most $limit bytes of each body. */
+function fetchAll(array $urls, int $timeout, int $limit = PHP_INT_MAX): array
 {
-    $body = '';
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_MAXREDIRS => 10,
-        CURLOPT_TIMEOUT => $timeout,
-        CURLOPT_ENCODING => '', // accept gzip and the like, as Go does
-        CURLOPT_USERAGENT => 'service-atlas',
-        // A page must not make us read file:// or other local URLs.
-        CURLOPT_PROTOCOLS_STR => 'http,https',
-        CURLOPT_REDIR_PROTOCOLS_STR => 'http,https',
-        // Stops the download at $limit bytes: returning less than the chunk length aborts it.
-        CURLOPT_WRITEFUNCTION => function ($ch, string $chunk) use (&$body, $limit): int {
-            $body .= substr($chunk, 0, $limit - strlen($body));
-            return strlen($body) < $limit ? strlen($chunk) : 0;
-        },
-    ]);
+    $mh = curl_multi_init();
+    $handles = $bodies = $results = [];
     // libcurl ignores SSL_CERT_FILE. Like Go, trust its CA certificates in addition to the system ones.
-    if ($file = getenv('SSL_CERT_FILE')) {
-        curl_setopt_array($ch, [CURLOPT_CAINFO => $file, CURLOPT_CAPATH => '/etc/ssl/certs']);
+    $ca = ($file = getenv('SSL_CERT_FILE')) ? [CURLOPT_CAINFO => $file, CURLOPT_CAPATH => '/etc/ssl/certs'] : [];
+    foreach ($urls as $i => $url) {
+        $bodies[$i] = '';
+        curl_multi_add_handle($mh, $handles[$i] = curl_init($url));
+        curl_setopt_array($handles[$i], $ca + [
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => $timeout,
+            CURLOPT_ENCODING => '', // accept gzip and the like, as Go does
+            CURLOPT_USERAGENT => 'service-atlas',
+            // A page must not make us read file:// or other local URLs.
+            CURLOPT_PROTOCOLS_STR => 'http,https', CURLOPT_REDIR_PROTOCOLS_STR => 'http,https',
+            // Stops the download at $limit bytes: returning less than the chunk length aborts it.
+            CURLOPT_WRITEFUNCTION => function ($ch, string $chunk) use (&$bodies, $i, $limit): int {
+                $bodies[$i] .= substr($chunk, 0, $limit - strlen($bodies[$i]));
+                return strlen($bodies[$i]) < $limit ? strlen($chunk) : 0;
+            },
+        ]);
     }
-    if (!curl_exec($ch) && curl_errno($ch) !== CURLE_WRITE_ERROR) {
-        throw new RuntimeException(curl_error($ch));
+    while (curl_multi_exec($mh, $running) === CURLM_OK && $running) curl_multi_select($mh);
+    while ($info = curl_multi_info_read($mh)) {
+        $results[spl_object_id($info['handle'])] = $info['result'];
     }
-    // curl adds a / to an empty path, Go keeps the URL as requested unless redirected.
-    $final = curl_getinfo($ch, CURLINFO_REDIRECT_COUNT) ? curl_getinfo($ch, CURLINFO_EFFECTIVE_URL) : $url;
-    return [curl_getinfo($ch, CURLINFO_RESPONSE_CODE), $body, $final];
+    foreach ($handles as $i => $ch) {
+        // curl adds a / to an empty path, Go keeps the URL as requested unless redirected.
+        $final = curl_getinfo($ch, CURLINFO_REDIRECT_COUNT) ? curl_getinfo($ch, CURLINFO_EFFECTIVE_URL) : $urls[$i];
+        $handles[$i] = in_array($results[spl_object_id($ch)], [CURLE_OK, CURLE_WRITE_ERROR], true)
+            ? [curl_getinfo($ch, CURLINFO_RESPONSE_CODE), $bodies[$i], $final] : new RuntimeException(curl_error($ch));
+    }
+    return $handles;
 }
 
 /** Lists the subdomains in the CT logs with the date of their latest certificate. */
 function fetchSubdomains(string $domain): array
 {
-    [, $body] = fetch('https://crt.sh/?output=json&q=' . rawurlencode("%.$domain"), 20);
-    $certs = json_decode($body, true, flags: JSON_THROW_ON_ERROR);
-    if (!is_array($certs)) {
-        throw new RuntimeException('unexpected crt.sh response');
-    }
+    $res = fetchAll(['https://crt.sh/?output=json&q=' . rawurlencode("%.$domain")], 20)[0];
+    $certs = is_array($res) ? json_decode($res[1], true, flags: JSON_THROW_ON_ERROR) : throw $res;
+    is_array($certs) || throw new RuntimeException('unexpected crt.sh response');
     $latest = [];
-    foreach ($certs as $c) {
+    foreach ($certs as $c) foreach (preg_split('/\s+/', strtolower($c['name_value'] ?? '')) as $name) {
+        // ISO timestamps compare as strings, strcmp avoids PHP's numeric comparison.
         $issued = (string) ($c['not_before'] ?? '');
-        foreach (preg_split('/\s+/', strtolower($c['name_value'] ?? ''), -1, PREG_SPLIT_NO_EMPTY) as $name) {
-            // ISO timestamps compare as strings, strcmp avoids PHP's numeric comparison.
-            if (str_ends_with($name, ".$domain") && $name[0] !== '*' && strcmp($issued, $latest[$name] ?? '') > 0) {
-                $latest[$name] = $issued;
-            }
+        if (str_ends_with($name, ".$domain") && $name[0] !== '*' && strcmp($issued, $latest[$name] ?? '') > 0) {
+            $latest[$name] = $issued;
         }
     }
-    $services = [];
-    foreach ($latest as $host => $issued) {
-        $services[] = ['host' => (string) $host, 'issued' => $issued];
-    }
-    return $services;
+    return array_map(fn($h, $i) => ['host' => (string) $h, 'issued' => $i], array_keys($latest), $latest);
 }
 
 /** Resolves an href against $base like Go's net/url: HTML entities decoded, disallowed bytes such as spaces escaped. */
@@ -76,28 +75,36 @@ function resolve(string $href, string $base): ?string
     return Uri::parse($href, Uri::parse($base))?->toRawString();
 }
 
-/** Requests https://host and extracts its favicon and web app manifest name and description. */
-function probe(array $s): array
+/** Requests https://host of all services at once, extracts favicon and web app manifest name and description. */
+function probe(array $services): array
 {
-    $s = ['host' => $s['host'], 'issued' => $s['issued'], 'status' => 0,
-        'error' => null, 'name' => null, 'description' => null, 'favicon' => null];
-    try {
-        // Links are resolved against the final URL, since the request may have been redirected.
-        [$s['status'], $body, $url] = fetch("https://{$s['host']}", 5, 1 << 20);
-        if (preg_match(ICON_RE, $body, $tag) && preg_match(HREF_RE, $tag[0], $href)) {
-            $s['favicon'] = resolve($href[1], $url);
+    $pages = fetchAll(array_map(fn($s) => "https://{$s['host']}", $services), 5, 1 << 20);
+    $links = [];
+    foreach ($services as $i => ['host' => $host, 'issued' => $issued]) {
+        $s = compact('host', 'issued') + ['status' => 0, 'error' => null, 'name' => null, 'description' => null];
+        if ($pages[$i] instanceof RuntimeException) {
+            $s['error'] = $pages[$i]->getMessage();
+        } else {
+            // Links are resolved against the final URL, since the request may have been redirected.
+            [$s['status'], $body, $url] = $pages[$i];
+            if (preg_match(ICON_RE, $body, $tag) && preg_match(HREF_RE, $tag[0], $href)) {
+                $s['favicon'] = resolve($href[1], $url);
+            }
+            if (preg_match(MANIFEST_RE, $body, $tag) && preg_match(HREF_RE, $tag[0], $href)) {
+                $links[$i] = resolve($href[1], $url);
+            }
         }
-        if (preg_match(MANIFEST_RE, $body, $tag) && preg_match(HREF_RE, $tag[0], $href)) {
-            $manifest = ($link = resolve($href[1], $url)) ? json_decode(fetch($link, 5)[1], true) : null;
-            // Go matches JSON keys case-insensitively.
-            $manifest = is_array($manifest) ? array_change_key_case($manifest) : [];
-            $s['name'] = is_string($manifest['name'] ?? null) ? $manifest['name'] : null;
-            $s['description'] = is_string($manifest['description'] ?? null) ? $manifest['description'] : null;
-        }
-    } catch (RuntimeException $e) {
-        $s['error'] ??= $s['status'] ? null : $e->getMessage(); // a failed manifest only loses the manifest
+        $services[$i] = $s;
     }
-    return array_filter($s, fn($v) => $v !== null && $v !== ''); // like omitempty
+    // A failed manifest only loses the manifest.
+    foreach (fetchAll(array_filter($links), 5) as $i => $res) {
+        $manifest = is_array($res) ? json_decode($res[1], true) : null;
+        // Go matches JSON keys case-insensitively.
+        $manifest = is_array($manifest) ? array_change_key_case($manifest) : [];
+        $services[$i]['name'] = is_string($manifest['name'] ?? null) ? $manifest['name'] : null;
+        $services[$i]['description'] = is_string($manifest['description'] ?? null) ? $manifest['description'] : null;
+    }
+    return array_map(fn($s) => array_filter($s, fn($v) => $v !== null && $v !== ''), $services); // like omitempty
 }
 
 function age(?string $time): float
@@ -111,17 +118,17 @@ function getServices(string $domain, bool $refresh): array
     // basename keeps the domain from escaping the cache directory.
     $dir = dirname(__DIR__) . '/cache';
     $file = $dir . '/' . basename($domain) . '.json';
-    $e = json_decode(@file_get_contents($file) ?: '{}', true) ?: [];
+    $e = json_decode(@file_get_contents($file) ?: '{}', true)
+        ?: ['fetched_at' => '0001-01-01T00:00:00Z', 'checked_at' => null]; // Go's zero time without a cache file
     if ($refresh || age($e['fetched_at'] ?? null) > TTL) {
         // On errors keep the cached list, crt.sh is flaky.
         try {
             $e = ['fetched_at' => date_create()->format(DATE_RFC3339_EXTENDED), 'checked_at' => null,
-                'services' => fetchSubdomains($domain)];
-        } catch (Exception) {
-        }
+                'subdomains' => fetchSubdomains($domain)];
+        } catch (Exception) {}
     }
     if ($refresh || age($e['checked_at'] ?? null) > CHECK_TTL) {
-        $e['services'] = array_map(probe(...), $e['services'] ?? []);
+        $e['subdomains'] = probe($e['subdomains'] ?? []);
         $e['checked_at'] = date_create()->format(DATE_RFC3339_EXTENDED);
         // Written to a temporary file and renamed, so concurrent requests never read a partial file.
         @mkdir($dir, 0o755);
@@ -136,6 +143,5 @@ function getServices(string $domain, bool $refresh): array
 set_time_limit(0);
 ini_set('memory_limit', '-1');
 $domain = is_string($_GET['domain'] ?? null) ? strtolower($_GET['domain']) : '';
-$e = getServices($domain, isset($_GET['refresh']));
 header('Content-Type: application/json');
-echo json_encode(['subdomains' => $e['services'] ?? [], 'checked_at' => $e['checked_at']], JSON_FLAGS);
+echo json_encode(getServices($domain, isset($_GET['refresh'])), JSON_FLAGS);
