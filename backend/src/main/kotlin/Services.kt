@@ -1,19 +1,13 @@
 @file:OptIn(ExperimentalSerializationApi::class)
 
 import java.io.File
-import java.net.URI
-import java.net.URLEncoder
+import java.net.*
 import java.util.concurrent.Callable
-import kotlin.time.Clock
-import kotlin.time.Duration
+import kotlin.time.*
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.Instant
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.decodeFromStream
+import kotlinx.serialization.*
+import kotlinx.serialization.json.*
 
 // Cache and limits
 val ttl = 24.hours // subdomain list from crt.sh
@@ -25,15 +19,17 @@ const val MAX_BODY_SIZE = 1 shl 20 // read of a probed page, 1 MiB
 val zeroTime = Instant.parse("0001-01-01T00:00:00Z")
 
 // HTML parsing
-val htmlRegexOptions = setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
-val manifestRe = Regex("""<link[^>]+rel=["']?manifest["']?[^>]*>""", htmlRegexOptions)
-val iconRe = Regex("""<link[^>]+rel=["'][^"']*icon[^"']*["'][^>]*>""", htmlRegexOptions)
-val hrefRe = Regex("""href=["']([^"']+)["']""", htmlRegexOptions)
+val manifestRe = Regex("""<link[^>]+rel=["']?manifest["']?[^>]*>""", RegexOption.IGNORE_CASE)
+val iconRe = Regex("""<link[^>]+rel=["'][^"']*icon[^"']*["'][^>]*>""", RegexOption.IGNORE_CASE)
+val hrefRe = Regex("""href=["']([^"']+)["']""", RegexOption.IGNORE_CASE)
 val htmlEntities = mapOf("&amp;" to "&", "&lt;" to "<", "&gt;" to ">", "&quot;" to "\"", "&#39;" to "'")
 val whitespace = Regex("\\s+")
 
-// JSON
-val json = Json { ignoreUnknownKeys = true; explicitNulls = false; coerceInputValues = true; encodeDefaults = true }
+// JSON, snake_case like the APIs of crt.sh and Go
+val json = Json {
+    ignoreUnknownKeys = true; explicitNulls = false; coerceInputValues = true; encodeDefaults = true
+    namingStrategy = JsonNamingStrategy.SnakeCase
+}
 
 @Serializable
 data class Service(
@@ -47,17 +43,10 @@ data class Service(
 )
 
 @Serializable
-data class CacheEntry(
-    @SerialName("fetched_at") val fetchedAt: Instant = zeroTime,
-    @SerialName("checked_at") val checkedAt: Instant = zeroTime,
-    @SerialName("subdomains") val services: List<Service> = emptyList(),
-)
+data class CacheEntry(val fetchedAt: Instant = zeroTime, val checkedAt: Instant = zeroTime, val subdomains: List<Service> = emptyList())
 
 @Serializable
-data class Cert(
-    @SerialName("name_value") val nameValue: String = "",
-    @SerialName("not_before") val notBefore: String = "",
-)
+data class Cert(val nameValue: String = "", val notBefore: String = "")
 
 @Serializable
 data class Manifest(val name: String? = null, val description: String? = null)
@@ -70,12 +59,10 @@ fun fetchSubdomains(domain: String): List<Service> {
     val url = "https://crt.sh/?output=json&q=" + URLEncoder.encode("%.$domain", Charsets.UTF_8)
     val certs = fetch(url, crtShTimeout) { json.decodeFromStream<List<Cert>>(it.body()) }
     val latest = HashMap<String, String>()
-    for (cert in certs) {
-        for (name in cert.nameValue.lowercase().split(whitespace)) {
-            // ISO timestamps compare as strings.
-            if (name.endsWith(".$domain") && !name.startsWith("*") && cert.notBefore > latest[name].orEmpty()) {
-                latest[name] = cert.notBefore
-            }
+    for (cert in certs) for (name in cert.nameValue.lowercase().split(whitespace)) {
+        // ISO timestamps compare as strings.
+        if (name.endsWith(".$domain") && !name.startsWith("*") && cert.notBefore > latest[name].orEmpty()) {
+            latest[name] = cert.notBefore
         }
     }
     return latest.map { (host, issued) -> Service(host, issued) }
@@ -124,8 +111,8 @@ fun getServices(domain: String, refresh: Boolean): CacheEntry {
         runCatching { fetchSubdomains(domain) }.onSuccess { entry = CacheEntry(Clock.System.now(), zeroTime, it) }
     }
     if (refresh || expired(entry.checkedAt, checkTtl)) {
-        val probes = entry.services.map { tasks.submit(Callable { probe(it) }) }
-        entry = entry.copy(services = probes.map { it.get() }, checkedAt = Clock.System.now())
+        val probes = entry.subdomains.map { tasks.submit(Callable { probe(it) }) }
+        entry = entry.copy(subdomains = probes.map { it.get() }, checkedAt = Clock.System.now())
         runCatching { File("cache").mkdirs(); file.writeText(json.encodeToString(entry)) }
     }
     return entry
