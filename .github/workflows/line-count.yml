@@ -20,31 +20,35 @@ jobs:
           import re, subprocess, sys
 
           desc = {
-              "src/main/kotlin/Services.kt": "Backend: crt.sh lookup, probing, cache",
-              "src/main/kotlin/Main.kt": "Backend: HTTP server, API, static files",
-              "src/main/kotlin/Http.kt": "Backend: HTTP client with timeouts and TLS trust",
-              "static/main.js": "Frontend: loads, sorts and renders the services",
-              "static/index.html": "Page skeleton and card template",
-              "static/style.css": "Custom styles on top of Blades",
-              "static/blades.min.css": "Vendored Blades CSS (Pico fork)",
+              "backend/src/main/kotlin/Services.kt": "crt.sh lookup, probing, cache",
+              "backend/src/main/kotlin/Main.kt": "HTTP server, API, static files",
+              "backend/src/main/kotlin/Http.kt": "HTTP client with timeouts and TLS trust",
+              "backend/build.gradle.kts": "Gradle build definition",
+              "backend/settings.gradle.kts": "Gradle project name",
+              "frontend/main.js": "Loads, sorts and renders the services",
+              "frontend/index.html": "Page skeleton and card template",
+              "frontend/style.css": "Custom styles on top of Blades",
+              "frontend/blades.min.css": "Vendored Blades CSS (Pico fork)",
               "Dockerfile": "Native image build, distroless container image",
-              "build.gradle.kts": "Gradle build definition",
-              "settings.gradle.kts": "Gradle project name",
           }
+          categories = {"Backend": "backend/", "Frontend": "frontend/", "Dockerfile": "Dockerfile"}
           # Hidden files and folders like .github don't count.
           files = [f for f in subprocess.check_output(["git", "ls-files"], text=True).split() if not re.search(r"(^|/)\.", f)]
           lines = {f: open(f, "rb").read().count(b"\n") for f in files}
           # The table also skips Markdown docs.
           listed = sorted((f for f in files if not f.endswith(".md")), key=lines.get, reverse=True)
 
-          unknown = [f for f in listed if f not in desc]
+          unknown = [f for f in listed if f not in desc or not any(f.startswith(p) for p in categories.values())]
           for f in unknown:
-              print(f"::error file={f}::Unknown file, add a description to .github/workflows/line-count.yml")
+              print(f"::error file={f}::Unknown file, add a description and category to .github/workflows/line-count.yml")
           if unknown:
               sys.exit(1)
 
           rows = ["| File | Lines | Description |", "| --- | ---: | --- |"]
-          rows += [f"| `{f}` | {lines[f]} | {desc[f]} |" for f in listed]
+          for name, prefix in categories.items():
+              group = [f for f in listed if f.startswith(prefix)]
+              rows += [f"| **{name}** | **{sum(lines[f] for f in group)}** | |"]
+              rows += [f"| `{f}` | {lines[f]} | {desc[f]} |" for f in group]
           rows += [f"| **Total** | **{sum(lines[f] for f in listed)}** | |"]
           readme = open("README.md").read()
           readme = re.sub(r"(?s)(<!-- loc:start -->\n).*?(<!-- loc:end -->)", lambda m: m[1] + "\n".join(rows) + "\n" + m[2], readme)

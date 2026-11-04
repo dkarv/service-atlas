@@ -21,6 +21,6 @@
       "onAutoForward": "openBrowser"
     }
   },
-  "postStartCommand": "gradle run",
+  "postStartCommand": "cd backend && gradle run",
   "remoteUser": "vscode"
 }
