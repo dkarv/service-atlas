@@ -14,15 +14,15 @@ With AI-assisted programming it has become easy to build large, complicated syst
 | File | Lines | Description |
 | --- | ---: | --- |
 | `static/blades.min.css` | 144 | Vendored Blades CSS (Pico fork) |
-| `src/main/kotlin/Services.kt` | 137 | Backend: crt.sh lookup, service checks, cache |
+| `src/main/kotlin/Services.kt` | 138 | Backend: crt.sh lookup, service checks, cache |
 | `static/main.js` | 76 | Frontend: loads, sorts and renders the services |
-| `src/main/kotlin/Main.kt` | 55 | Backend: HTTP server, API, static files |
+| `src/main/kotlin/Main.kt` | 74 | Backend: HTTP server, API, static files |
 | `static/style.css` | 45 | Custom styles on top of Blades |
 | `static/index.html` | 32 | Page skeleton and card template |
 | `Dockerfile` | 23 | Native image build, distroless container image |
 | `build.gradle.kts` | 14 | Gradle build definition |
 | `settings.gradle.kts` | 1 | Gradle project name |
-| **Total** | **527** | |
+| **Total** | **547** | |
 <!-- loc:end -->
 
 
@@ -34,7 +34,7 @@ With AI-assisted programming it has become easy to build large, complicated syst
 - Serves a static `index.html` that loads the subdomain list via `/api/subdomains`.
 - JSON API: `GET /api/subdomains?domain=yourdomain.com`
 
-No configuration files, no environment variables. Just run and access via your domain.
+No configuration files. Just run and access via your domain. Optionally `SSL_CERT_FILE` adds trusted CA certificates, e.g. of a private CA, as it does for Go.
 
 
 ## Quickstart

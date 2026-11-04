@@ -30,7 +30,8 @@ val iconRe = Regex("""<link[^>]+rel=["'][^"']*icon[^"']*["'][^>]*>""", flags)
 val hrefRe = Regex("""href=["']([^"']+)["']""", flags)
 val entities = mapOf("&amp;" to "&", "&lt;" to "<", "&gt;" to ">", "&quot;" to "\"", "&#39;" to "'")
 val tasks = Executors.newVirtualThreadPerTaskExecutor()
-val client: HttpClient = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS).executor(tasks).build()
+val client: HttpClient = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS).executor(tasks)
+    .sslContext(sslContext()).build()
 val json = Json { ignoreUnknownKeys = true; explicitNulls = false; coerceInputValues = true; encodeDefaults = true }
 
 @Serializable
