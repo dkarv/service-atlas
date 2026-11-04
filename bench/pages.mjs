@@ -19,7 +19,8 @@ const head = ['Branch', 'Commit', ...headers].map((h, i) =>
 const body = rows.map(({ entry, cells }) => `<tr title="${esc(runOf(entry))}">` +
   `<td data-v="${esc(short(entry.name))}"><code>${esc(short(entry.name))}</code></td>` +
   `<td data-v="${esc(entry.commit)}"><a href="https://github.com/${repo}/commit/${esc(entry.commit)}">${esc(entry.commit)}</a></td>` +
-  cells.map(c => `<td class="num" data-v="${c.value ?? ''}">${esc(c.text)}</td>`).join('') + '</tr>').join('\n');
+  cells.map(c => `<td class="num" data-v="${c.value ?? ''}">${esc(c.text)}` +
+    (c.delta ? ` <span class="${c.delta.better ? 'better' : 'worse'}">(${esc(c.delta.text)})</span>` : '') + '</td>').join('') + '</tr>').join('\n');
 const runs = entries.map(e => `<li><code>${esc(short(e.name))}</code> (${esc(e.commit)}): ${esc(runOf(e))}</li>`).join('');
 
 process.stdout.write(`<!doctype html>
@@ -29,9 +30,9 @@ process.stdout.write(`<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>service-atlas benchmark</title>
 <style>
-:root { --bg: #fff; --fg: #1f2328; --muted: #59636e; --line: #d1d9e0; --head: #f6f8fa; --accent: #0969da; color-scheme: light dark; }
+:root { --bg: #fff; --fg: #1f2328; --muted: #59636e; --line: #d1d9e0; --head: #f6f8fa; --accent: #0969da; --better: #1a7f37; --worse: #d1242f; color-scheme: light dark; }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #0d1117; --fg: #e6edf3; --muted: #9198a1; --line: #3d444d; --head: #151b23; --accent: #4493f8; }
+  :root { --bg: #0d1117; --fg: #e6edf3; --muted: #9198a1; --line: #3d444d; --head: #151b23; --accent: #4493f8; --better: #3fb950; --worse: #f85149; }
 }
 body { margin: 0 auto; max-width: 1100px; padding: 24px 16px; background: var(--bg); color: var(--fg);
   font: 15px/1.5 system-ui, sans-serif; }
@@ -47,13 +48,15 @@ th button { all: unset; cursor: pointer; font-weight: 600; }
 th button::after { content: " \\2195"; color: var(--muted); }
 th[aria-sort=ascending] button::after { content: " \\2191"; color: var(--fg); }
 th[aria-sort=descending] button::after { content: " \\2193"; color: var(--fg); }
+.better { color: var(--better); }
+.worse { color: var(--worse); }
 code { font: 13px ui-monospace, monospace; }
 </style>
 </head>
 <body>
 <h1>service-atlas benchmark</h1>
 <p>One row per branch of <a href="https://github.com/${repo}">${esc(repo)}</a>. Click a header to sort.
-Medians. Percentages and factors are relative to <code>${esc(short(entries[0].name))}</code>. ${code(LEGEND)}</p>
+Medians. Percentages are relative to <code>${esc(short(entries[0].name))}</code>,\n<span class="better">green</span> is better, <span class="worse">red</span> is worse. ${code(LEGEND)}</p>
 <div class="scroll"><table>
 <thead><tr>${head}</tr></thead>
 <tbody>

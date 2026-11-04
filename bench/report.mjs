@@ -24,12 +24,15 @@ export const LEGEND = 'Image: gzipped. Build: uncached. Startup: process start t
 
 export const short = name => name.replace(/^experiments\//, '');
 
+// The change relative to the reference as a percentage, and whether it is an improvement. Null if it rounds to 0%.
 function relative(value, ref, higherIsBetter) {
-  const ratio = value / ref;
-  if (!ref || Math.round((ratio - 1) * 100) === 0) return '';
-  if (higherIsBetter || (ratio > 0.5 && ratio < 2)) return ` (${ratio > 1 ? '+' : ''}${((ratio - 1) * 100).toFixed(0)}%)`;
-  return ` (${ratio.toFixed(1)}x)`;
+  const percent = Math.round((value / ref - 1) * 100);
+  if (!ref || percent === 0) return null;
+  return { text: `${percent > 0 ? '+' : ''}${thousands(percent)}%`, better: (percent > 0) === Boolean(higherIsBetter) };
 }
+
+// Markdown on GitHub has no colors except in math, where % must be escaped.
+const colored = ({ text, better }) => `$\\color{${better ? 'green' : 'red'}}{\\text{${text.replace('%', '\\%')}}}$`;
 
 // When and where an entry was measured, with the number of repetitions of the phases it has.
 export function runOf({ date, machine, counts, results }) {
@@ -52,15 +55,16 @@ export function readEntries(files) {
   return entries.sort((a, b) => (b.name === 'main') - (a.name === 'main') || a.name.localeCompare(b.name));
 }
 
-// One row per implementation, one column per measurement: { headers, rows: [{ entry, cells: [{ value, text }] }] }.
+// One row per implementation, one column per measurement:
+// { headers, rows: [{ entry, cells: [{ value, text, delta: { text, better } | null }] }] }.
 export function table(entries) {
   const columns = COLUMNS.filter(([, phase]) => entries.some(e => e.results[phase]));
   const rows = entries.map(entry => ({
     entry,
     cells: columns.map(([, phase, pick, format, higherIsBetter]) => {
-      if (!entry.results[phase]) return { value: null, text: '-' };
+      if (!entry.results[phase]) return { value: null, text: '-', delta: null };
       const value = pick(entry.results[phase]), ref = entries[0].results[phase] && pick(entries[0].results[phase]);
-      return { value, text: format(value) + relative(value, ref, higherIsBetter) };
+      return { value, text: format(value), delta: relative(value, ref, higherIsBetter) };
     }),
   }));
   return { headers: columns.map(([header]) => header), rows };
@@ -72,8 +76,8 @@ export function report(entries) {
   out.push(`| Branch | Commit | ${headers.join(' | ')} |`);
   out.push(`| --- | --- | ${headers.map(() => '---:').join(' | ')} |`);
   for (const { entry, cells } of rows) {
-    out.push(`| \`${short(entry.name)}\` | ${entry.commit} | ${cells.map(c => c.text).join(' | ')} |`);
+    out.push(`| \`${short(entry.name)}\` | ${entry.commit} | ${cells.map(c => c.text + (c.delta ? ` ${colored(c.delta)}` : '')).join(' | ')} |`);
   }
-  out.push('', `Medians. Percentages and factors are relative to \`${short(entries[0].name)}\`. ${LEGEND}`);
+  out.push('', `Medians. Percentages are relative to \`${short(entries[0].name)}\`, green is better, red is worse. ${LEGEND}`);
   return out.join('\n') + '\n';
 }
