@@ -1,0 +1,2 @@
+# LF everywhere: bash fails on run.sh with CRLF line endings, e.g. after a checkout on Windows.
+* text=auto eol=lf
