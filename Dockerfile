@@ -1,13 +1,10 @@
-FROM golang:1.22-alpine AS builder
+# Node.js runs the JavaScript directly, no build step and no dependencies to install.
+FROM node:24-alpine
 WORKDIR /app
-COPY backend/ ./
+COPY backend/server.mjs ./backend/
 COPY frontend ./frontend
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o app . && mkdir cache
-
-# Static distroless image: CA certificates included, no shell, runs as nonroot
-FROM gcr.io/distroless/static-debian12:nonroot
-WORKDIR /app
-COPY --from=builder /app/app .
-COPY --from=builder --chown=nonroot:nonroot /app/cache ./cache
+# Runs as the unprivileged user of the image, which needs to own the cache directory.
+RUN mkdir cache && chown node:node cache
+USER node
 EXPOSE 8080
-CMD ["/app/app"]
+CMD ["node", "backend/server.mjs"]
