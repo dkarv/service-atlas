@@ -1,9 +1,9 @@
 [
  {
   "name": "main",
-  "commit": "7bdc15b",
+  "commit": "ca91d91",
   "date": "2026-11-04",
-  "machine": "Ubuntu 26.04.1 LTS, kernel 7.0.0-1019-azure, 4 CPUs, 15.6 GB RAM, Docker 29.4.2",
+  "machine": "Ubuntu 26.04.1 LTS, kernel 7.0.0-1017-azure, 4 CPUs, 15.6 GB RAM, Docker 29.4.2",
   "counts": {
    "runs": 5,
    "startupRuns": 30
@@ -12,7 +12,6 @@
    "diff": {
     "hosts": 55,
     "problems": [],
-    "differences": [],
     "output": {
      "dead0.bench.test": {
       "status": 0,
@@ -399,32 +398,34 @@
       "description": null,
       "favicon": "https://s9.bench.test/touch.png"
      }
-    }
+    },
+    "differences": [],
+    "intended": []
    },
    "loc": {
     "lines": 164,
     "chars": 4239
    },
    "size": {
-    "gzipped": 3307238
+    "gzipped": 3307256
    },
    "startup": {
-    "fromStart": 86.51009206250001
+    "fromStart": 84.279224953125
    },
    "load": {
-    "idle": 6.6640625,
-    "peak": 39.55859375,
-    "staticRps": 16755.41,
-    "apiRps": 2087.03
+    "idle": 6.5859375,
+    "peak": 40.1796875,
+    "staticRps": 16675.44,
+    "apiRps": 3619.38
    },
    "build": {
-    "ms": 10908.716468999977,
+    "ms": 10573.179485999979,
     "all": [
-     10910.522173000005,
-     10751.987068000017,
-     11273.449617000006,
-     10908.716468999977,
-     10864.569949999976
+     10797.511904000014,
+     10573.179485999979,
+     10805.608828999975,
+     10480.09146799997,
+     10535.431561999954
     ]
    }
   }
