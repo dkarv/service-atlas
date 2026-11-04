@@ -2,6 +2,8 @@
 
 Minimal service that generates a service overview homepage from Certificate Transparency (CT) logs.
 
+> **Experimental branch:** a port of the Go backend on `main` to Python 3.13, with no dependencies: only the standard library (`http.server`, `urllib`, threads). For self-hosting use `main`. How the implementations compare is measured on the [`benchmark`](https://github.com/dkarv/service-atlas/tree/benchmark) branch.
+
 ![Screenshot of the service overview](.github/assets/screenshot.png)
 
 ## Philosophy
@@ -41,20 +43,27 @@ No configuration files, no environment variables. Just run and access via your d
 ### Build & run locally
 
 ```bash
-# The frontend is embedded into the binary, so copy it next to main.go first (git-ignored)
-rm -rf backend/frontend && cp -r frontend backend/
-cd backend && go run .
+python3 backend/main.py
 ```
+
+Needs Python 3.8 or newer. There is nothing to install or build: the server serves `frontend/` next to `backend/` and keeps the cache in `cache/` in the working directory.
 
 Open `http://localhost:8080` in your browser.
 
 ### Docker
 
 ```bash
-docker run --rm -p 8080:8080 -v service-atlas-cache:/app/cache ghcr.io/dkarv/service-atlas
+docker build -t service-atlas .
+docker run --rm -p 8080:8080 -v service-atlas-cache:/app/cache service-atlas
 ```
 
-Images are published to GHCR on every push to `main` (`:latest`) and for `v*` tags (`:1.2.3`, `:1.2`). To build locally instead: `docker build -t service-atlas .`
+The image is `python:3.13-alpine`, running as the unprivileged user `nobody`. The published `ghcr.io/dkarv/service-atlas` images are built from `main`.
+
+## Differences from the Go version
+
+- An empty list is `[]` instead of `null`, and the API sends `application/json` instead of `text/plain`.
+- Error messages are Python's, timestamps have microsecond precision and a reset `checked_at` is `null` in the cache file.
+- A manifest is only read from a successful response, and at most 64 sites are probed at once.
 
 
 ## Experiments

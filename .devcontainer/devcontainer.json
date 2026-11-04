@@ -1,26 +1,13 @@
 {
   "name": "service-atlas",
-  "image": "mcr.microsoft.com/devcontainers/go:1.22",
+  "image": "mcr.microsoft.com/devcontainers/python:3.13",
   "forwardPorts": [8080],
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "golang.go"
-      ],
-      "settings": {
-        "go.toolsManagement.autoUpdate": true,
-        "go.useLanguageServer": true,
-        "go.lintTool": "golangci-lint"
-      }
-    }
-  },
   "portsAttributes": {
     "8080": {
-      "label": "Go application",
+      "label": "Python application",
       "onAutoForward": "openBrowser"
     }
   },
-  "postCreateCommand": "cd backend && go mod download",
-  "postStartCommand": "rm -rf backend/frontend && cp -r frontend backend/ && cd backend && go run .",
+  "postStartCommand": "python backend/main.py",
   "remoteUser": "vscode"
 }

@@ -1,13 +1,10 @@
-FROM golang:1.25-alpine AS builder
+# Python runs the script directly, no build step and no dependencies to install.
+FROM python:3.13-alpine
 WORKDIR /app
-COPY backend/ ./
+COPY backend/main.py ./backend/
 COPY frontend ./frontend
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o app . && mkdir cache
-
-# Static distroless image: CA certificates included, no shell, runs as nonroot
-FROM gcr.io/distroless/static-debian12:nonroot
-WORKDIR /app
-COPY --from=builder /app/app .
-COPY --from=builder --chown=nonroot:nonroot /app/cache ./cache
+# Runs as an unprivileged user, which needs to own the cache directory.
+RUN mkdir cache && chown nobody cache
+USER nobody
 EXPOSE 8080
-CMD ["/app/app"]
+CMD ["python", "backend/main.py"]

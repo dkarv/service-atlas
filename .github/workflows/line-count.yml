@@ -20,13 +20,12 @@ jobs:
           import re, subprocess, sys
 
           desc = {
-              "backend/main.go": "crt.sh lookup, service checks, cache, API",
-              "backend/go.mod": "Go module definition",
+              "backend/main.py": "crt.sh lookup, service checks, cache, API, static files",
               "frontend/main.js": "Loads, sorts and renders the services",
               "frontend/index.html": "Page skeleton and card template",
               "frontend/style.css": "Custom styles on top of Blades",
               "frontend/blades.min.css": "Vendored Blades CSS (Pico fork)",
-              "Dockerfile": "Distroless container image",
+              "Dockerfile": "Python container image",
           }
           categories = {"Backend": "backend/", "Frontend": "frontend/", "Dockerfile": "Dockerfile"}
           # Hidden files and folders like .github don't count.
