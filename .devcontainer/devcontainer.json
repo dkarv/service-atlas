@@ -1,26 +1,26 @@
 {
   "name": "service-atlas",
-  "image": "mcr.microsoft.com/devcontainers/go:1.22",
+  "image": "mcr.microsoft.com/devcontainers/java:25",
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "none",
+      "installGradle": true
+    }
+  },
   "forwardPorts": [8080],
   "customizations": {
     "vscode": {
       "extensions": [
-        "golang.go"
-      ],
-      "settings": {
-        "go.toolsManagement.autoUpdate": true,
-        "go.useLanguageServer": true,
-        "go.lintTool": "golangci-lint"
-      }
+        "fwcd.kotlin"
+      ]
     }
   },
   "portsAttributes": {
     "8080": {
-      "label": "Go application",
+      "label": "Kotlin application",
       "onAutoForward": "openBrowser"
     }
   },
-  "postCreateCommand": "go mod download",
-  "postStartCommand": "go run .'",
+  "postStartCommand": "gradle run",
   "remoteUser": "vscode"
 }

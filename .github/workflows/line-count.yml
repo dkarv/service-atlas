@@ -20,13 +20,15 @@ jobs:
           import re, subprocess, sys
 
           desc = {
-              "main.go": "Backend: crt.sh lookup, service checks, cache, API",
+              "src/main/kotlin/Services.kt": "Backend: crt.sh lookup, service checks, cache",
+              "src/main/kotlin/Main.kt": "Backend: HTTP server, API, static files",
               "static/main.js": "Frontend: loads, sorts and renders the services",
               "static/index.html": "Page skeleton and card template",
               "static/style.css": "Custom styles on top of Blades",
               "static/blades.min.css": "Vendored Blades CSS (Pico fork)",
-              "Dockerfile": "Distroless container image",
-              "go.mod": "Go module definition",
+              "Dockerfile": "Native image build, distroless container image",
+              "build.gradle.kts": "Gradle build definition",
+              "settings.gradle.kts": "Gradle project name",
           }
           # Hidden files and folders like .github don't count.
           files = [f for f in subprocess.check_output(["git", "ls-files"], text=True).split() if not re.search(r"(^|/)\.", f)]

@@ -1,1 +1,9 @@
 cache/
+build/
+.gradle/
+.kotlin/
+.idea/
+# The Gradle wrapper would break the 150 line limit (gradlew alone is 248 lines), install Gradle instead.
+gradlew
+gradlew.bat
+gradle/wrapper/
