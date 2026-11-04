@@ -17,19 +17,20 @@
   const meta = document.getElementById('meta');
   const list = document.querySelector('[aria-label="Self-hosted projects"]');
   const template = document.getElementById('service-template');
+  const show = (name, description) => {
+    template.querySelector('[data-service-name]').textContent = name;
+    template.querySelector('[data-service-description]').textContent = description;
+  };
 
   if (!res.ok) {
     title.textContent = 'Services';
     meta.textContent = 'Unable to load services.';
-    template.querySelector('[data-service-name]').textContent = 'Could not load services';
-    template.querySelector('[data-service-description]').textContent = 'Please try again later.';
-    return;
+    return show('Could not load services', 'Please try again later.');
   }
 
   const data = await res.json();
   // Most recently issued certificates first.
-  const subs = (data.subdomains || [])
-    .sort((a, b) => b.issued.localeCompare(a.issued));
+  const subs = (data.subdomains || []).sort((a, b) => b.issued.localeCompare(a.issued));
 
   meta.textContent = 'Last refresh: ' + new Date(data.checked_at).toLocaleString();
 
@@ -38,11 +39,7 @@
   refresh.href = '?' + params;
   refresh.hidden = false;
 
-  if (subs.length === 0) {
-    template.querySelector('[data-service-name]').textContent = 'No services found';
-    template.querySelector('[data-service-description]').textContent = 'No hostnames were returned for ' + domain + '.';
-    return;
-  }
+  if (subs.length === 0) return show('No services found', 'No hostnames were returned for ' + domain + '.');
 
   for (const service of subs) {
     const article = template.cloneNode(true);
@@ -70,7 +67,7 @@
     link.href = 'https://' + service.host;
     link.setAttribute('aria-label', 'Open ' + service.host);
     link.hidden = false;
-    list.appendChild(article);
+    list.append(article);
   }
 
   template.remove();

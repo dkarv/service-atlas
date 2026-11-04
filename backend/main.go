@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -41,7 +42,7 @@ type service struct {
 type cacheEntry struct {
 	FetchedAt time.Time `json:"fetched_at"`
 	CheckedAt time.Time `json:"checked_at"`
-	Services  []service `json:"services"`
+	Services  []service `json:"subdomains"`
 }
 
 // fetchSubdomains lists the subdomains in the CT logs with the date of their latest certificate.
@@ -121,9 +122,11 @@ func getServices(domain string, refresh bool) cacheEntry {
 		}
 	}
 	if refresh || time.Since(e.CheckedAt) > checkTTL {
+		var wg sync.WaitGroup
 		for i := range e.Services {
-			e.Services[i] = probe(e.Services[i])
+			wg.Go(func() { e.Services[i] = probe(e.Services[i]) })
 		}
+		wg.Wait()
 		e.CheckedAt = time.Now()
 		data, _ := json.Marshal(e)
 		os.MkdirAll("cache", 0o755)
@@ -133,11 +136,7 @@ func getServices(domain string, refresh bool) cacheEntry {
 }
 
 func apiHandler(w http.ResponseWriter, r *http.Request) {
-	e := getServices(strings.ToLower(r.URL.Query().Get("domain")), r.URL.Query().Has("refresh"))
-	json.NewEncoder(w).Encode(map[string]any{
-		"subdomains": e.Services,
-		"checked_at": e.CheckedAt,
-	})
+	json.NewEncoder(w).Encode(getServices(strings.ToLower(r.URL.Query().Get("domain")), r.URL.Query().Has("refresh")))
 }
 
 func main() {
