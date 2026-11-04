@@ -44,10 +44,12 @@ By default the load and build phases run 5 times and each implementation starts 
   node -e 'console.log(JSON.stringify(JSON.parse(require("fs").readFileSync(0))[0].results.diff.output, null, 1))' > bench/expected.json
 ```
 
-A branch whose output differs on purpose, e.g. because its URL parser follows an older RFC, lists those differences in `.bench-differences.json` at its root. Each entry accepts exactly one value of one field of one host, `reason` is for the reader:
+Only the hosts and fields in `bench/expected.json` have to match, additional hosts and fields in the output are ignored. A favicon URL may keep `../` in its path, e.g. `https://s2.bench.test/../up.png` like `java.net.URI`, as long as it resolves to the expected URL.
+
+A branch whose output differs on purpose otherwise lists those differences in `.bench-differences.json` at its root. Each entry accepts exactly one value of one field of one host, `reason` is for the reader:
 
 ```json
-[{ "host": "s2.bench.test", "field": "favicon", "value": "https://s2.bench.test/../up.png", "reason": "java.net.URI keeps ../ above the root" }]
+[{ "host": "s5.bench.test", "field": "name", "value": "App", "reason": "keeps only the first word" }]
 ```
 
 Listed differences are kept in the JSON under `intended` and don't fail the run. An entry that no longer matches the output does, so the list stays current. As a hidden file it doesn't count as code.

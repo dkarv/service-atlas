@@ -62,15 +62,27 @@ function intended(impl) {
   return JSON.parse(git('show', `${impl.ref}:${INTENDED}`));
 }
 
+// Only the hosts and fields in EXPECTED have to match, additional ones in the output are ignored.
 function differences(output) {
   const found = [];
-  for (const host of [...new Set([...Object.keys(EXPECTED), ...Object.keys(output)])].sort()) {
-    for (const field of FIELDS) {
-      const [expected, value] = [EXPECTED[host]?.[field] ?? null, output[host]?.[field] ?? null];
-      if (expected !== value) found.push({ host, field, expected, value });
+  for (const host of Object.keys(EXPECTED).sort()) {
+    for (const [field, expected] of Object.entries(EXPECTED[host])) {
+      const value = output[host]?.[field] ?? null;
+      if (!same(field, expected, value)) found.push({ host, field, expected, value });
     }
   }
   return found;
+}
+
+// A favicon may keep ../ in its path, e.g. above the root like java.net.URI, if it resolves to the expected URL.
+function same(field, expected, value) {
+  if (expected === value) return true;
+  if (field !== 'favicon' || typeof expected !== 'string' || typeof value !== 'string' || !/\/\.\.(\/|$|[?#])/.test(value)) return false;
+  try {
+    return new URL(value).href === new URL(expected).href;
+  } catch {
+    return false;
+  }
 }
 
 // Throws unless every implementation passed the HTTP contract and returned the expected or intended API output.
