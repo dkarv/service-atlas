@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Benchmarks the service-atlas implementations on different branches of this repository, see README.md.
-#   ./run.sh [--runs N] [--startup-runs N] [--phases LIST] [REF...] > results.md
+#   ./run.sh [--runs N] [--startup-runs N] [--phases LIST] [--json] [REF...] > results.md
 # Needs only bash, git and Docker: everything else runs in a tools container that drives Docker via its socket.
 set -euo pipefail
 export MSYS_NO_PATHCONV=1 # Git Bash on Windows must not rewrite the container paths

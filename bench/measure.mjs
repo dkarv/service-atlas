@@ -36,7 +36,7 @@ export function build(impls, { runs }) {
 
 const now = () => performance.timeOrigin + performance.now();
 
-// Time from `docker run` and from the start of the process (.State.StartedAt) until the first 200 on /.
+// Time from the start of the process (.State.StartedAt) until the first 200 on /.
 // The app joins the network namespace of this container: a closed port refuses at once, so polling is exact.
 // Both clocks are the one of the Docker host, as this container runs there too.
 export async function startup(impls, { startupRuns }) {
@@ -46,22 +46,20 @@ export async function startup(impls, { startupRuns }) {
     log(`Startup: ${impl.name}`);
     for (let i = 0; i < startupRuns; i++) {
       rm(APP);
-      const before = now();
       const started = spawn('docker', appArgs(impl, `container:${SELF}`), { stdio: 'ignore' });
       const exited = new Promise(resolve => started.on('close', resolve));
       let ready;
-      for (const end = before + 60000; !ready && now() < end; await sleep(1)) {
+      for (const end = now() + 60000; !ready && now() < end; await sleep(1)) {
         if ((await get('http://127.0.0.1:8080/', 200))?.status === 200) ready = now();
       }
       if ((await exited) !== 0 || !ready) throw new Error(`${impl.name} did not start`);
       const startedAt = docker('inspect', '--format', '{{.State.StartedAt}}', APP).trim();
       // Date.parse keeps milliseconds only, the timestamp has nanoseconds.
       const fraction = Number(`0.${(startedAt.match(/\.\d{3}(\d+)/)?.[1] ?? '0')}`);
-      samples.push({ fromRun: ready - before, fromStart: ready - Date.parse(startedAt) - fraction });
+      samples.push({ fromStart: ready - Date.parse(startedAt) - fraction });
     }
     rm(APP);
-    const fromStart = samples.map(s => s.fromStart);
-    results[impl.name] = { ...medians(samples), min: Math.min(...fromStart), max: Math.max(...fromStart) };
+    results[impl.name] = medians(samples);
   }
   return results;
 }
@@ -73,11 +71,7 @@ function wrk(args) {
   if (/Non-2xx or 3xx responses/.test(out) || socket?.slice(1).some(n => n !== '0')) {
     throw new Error(`wrk ${args.join(' ')} reported errors:\n${out}`);
   }
-  const p99 = out.match(/99%\s+([\d.]+)(us|ms|s)/);
-  return {
-    rps: Number(out.match(/Requests\/sec:\s+([\d.]+)/)[1]),
-    p99: p99 ? Number(p99[1]) * { us: 0.001, ms: 1, s: 1000 }[p99[2]] : NaN,
-  };
+  return { rps: Number(out.match(/Requests\/sec:\s+([\d.]+)/)[1]) };
 }
 
 // Per run and implementation: 3 s idle, 5 full refreshes, 15 s static file, 15 s cached API.
@@ -95,13 +89,9 @@ export async function load(impls, { runs }) {
         const res = await get(`${base}/api/subdomains?domain=bench.test&refresh=1`, 300000);
         if (res?.status !== 200) throw new Error(`${impl.name}: refresh failed with ${res?.status}`);
       }
-      const refreshed = memory().VmRSS;
       const statics = wrk(['-t4', '-c64', '-d15s', `${base}/blades.min.css`]);
-      const api = wrk(['-t1', '-c1', '-d15s', '--latency', `${base}/api/subdomains?domain=bench.test`]);
-      const end = memory();
-      samples[impl.name].push({
-        idle, refreshed, final: end.VmRSS, peak: end.VmHWM, staticRps: statics.rps, apiRps: api.rps, apiP99: api.p99,
-      });
+      const api = wrk(['-t1', '-c1', '-d15s', `${base}/api/subdomains?domain=bench.test`]);
+      samples[impl.name].push({ idle, peak: memory().VmHWM, staticRps: statics.rps, apiRps: api.rps });
       rm(APP, PROBE);
     }
   }

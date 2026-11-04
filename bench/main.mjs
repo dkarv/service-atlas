@@ -1,6 +1,6 @@
 // Entry point of the tools container, started by run.sh. Progress goes to stderr, the report to stdout.
 import { parseArgs } from 'node:util';
-import { git, log, setup, teardown } from './docker.mjs';
+import { git, log, machine, setup, teardown } from './docker.mjs';
 import { build, load, size, startup } from './measure.mjs';
 import { diff, loc } from './checks.mjs';
 import { report } from './report.mjs';
@@ -9,12 +9,13 @@ const PHASES = { diff, loc, size, startup, load, build };
 const usage = `Usage: ./run.sh [options] [REF...]
 
 Builds the Dockerfile at the root of each git REF (branch, tag or commit) and compares the images.
-Without REFs: main and all experiments/* branches, local or on origin. The first REF is the reference.
+Without REFs: main and all experiments/* branches, local or on origin. Percentages are relative to the first REF.
 
 Options:
   --runs N           runs of the load and build phases (default 3)
   --startup-runs N   container starts per implementation (default 20)
   --phases LIST      comma separated, default: ${Object.keys(PHASES).join(',')}
+  --json             write the results as JSON instead of Markdown, for bench/wiki.mjs
   -h, --help         show this help`;
 
 function fail(message) {
@@ -30,6 +31,7 @@ try {
       runs: { type: 'string', default: '3' },
       'startup-runs': { type: 'string', default: '20' },
       phases: { type: 'string', default: Object.keys(PHASES).join(',') },
+      json: { type: 'boolean' },
       help: { type: 'boolean', short: 'h' },
     },
   }));
@@ -90,9 +92,19 @@ try {
 } finally {
   teardown();
 }
+// One entry per implementation, see bench/report.mjs.
+const date = new Date().toISOString().slice(0, 10), host = machine();
+const entries = impls.map(({ name, commit }) => ({
+  name, commit, date, machine: host, counts,
+  results: Object.fromEntries(Object.entries(results).map(([phase, byName]) => [phase, byName[name]])),
+}));
 const finished = Object.keys(results).join(', ') || 'none';
-const incomplete = failure ? `\n**Incomplete:** the run failed, finished phases: ${finished}. See the error output.\n` : '';
-process.stdout.write(report(impls, results, counts) + incomplete);
+if (opts.json) {
+  process.stdout.write(JSON.stringify(entries, null, 1) + '\n');
+} else {
+  const incomplete = failure ? `\n**Incomplete:** the run failed, finished phases: ${finished}. See the error output.\n` : '';
+  process.stdout.write(report(entries) + incomplete);
+}
 if (failure) {
   console.error(failure.stack);
   process.exitCode = 1;

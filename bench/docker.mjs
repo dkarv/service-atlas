@@ -75,20 +75,19 @@ export function memory() {
     .map(l => l.split(/:\s+/)).map(([key, value]) => [key, parseInt(value, 10) / 1024]));
 }
 
-// Size of the image filesystem in bytes, as tar and gzipped.
+// Size of the image filesystem in bytes, gzipped: about the download size.
 export async function imageSize(tag) {
   rm('sa-bench-size');
   docker('create', '--name', 'sa-bench-size', tag);
-  let raw = 0, gzipped = 0;
+  let gzipped = 0;
   const exported = spawn('docker', ['export', 'sa-bench-size'], { stdio: ['ignore', 'pipe', 'inherit'] });
   await pipeline(
     exported.stdout,
-    async function* (source) { for await (const chunk of source) { raw += chunk.length; yield chunk; } },
     createGzip(),
     async function (source) { for await (const chunk of source) gzipped += chunk.length; },
   );
   rm('sa-bench-size');
-  return { raw, gzipped };
+  return { gzipped };
 }
 
 // Network, CA and mock shared by all phases, plus a first build of every image that pulls the base images.
@@ -107,6 +106,13 @@ export function setup(impls) {
     build(impl, false);
   }
   if (!docker('logs', MOCK).includes('mock ready')) throw new Error(`Mock failed:\n${docker('logs', MOCK)}`);
+}
+
+// The Docker host, for the report.
+export function machine() {
+  const info = JSON.parse(docker('info', '--format', '{{json .}}'));
+  return `${info.OperatingSystem}, kernel ${info.KernelVersion}, ${info.NCPU} CPUs, ` +
+    `${(info.MemTotal / 2 ** 30).toFixed(1)} GB RAM, Docker ${info.ServerVersion}`;
 }
 
 export function teardown() {
