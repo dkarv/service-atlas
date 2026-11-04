@@ -1,7 +1,7 @@
 [
  {
   "name": "experiments/kotlin-graalvm",
-  "commit": "daa72ed",
+  "commit": "ebe3c84",
   "date": "2026-11-04",
   "machine": "Ubuntu 26.04.1 LTS, kernel 7.0.0-1019-azure, 4 CPUs, 15.6 GB RAM, Docker 29.4.2",
   "counts": {
@@ -207,7 +207,7 @@
       "error": false,
       "name": null,
       "description": null,
-      "favicon": "https://s29.bench.test/?v=1"
+      "favicon": "https://s29.bench.test?v=1"
      },
      "s3.bench.test": {
       "status": 200,
@@ -298,7 +298,7 @@
       "error": false,
       "name": null,
       "description": null,
-      "favicon": "https://s40.bench.test/?v=1"
+      "favicon": "https://s40.bench.test?v=1"
      },
      "s41.bench.test": {
       "status": 200,
@@ -382,7 +382,7 @@
       "error": false,
       "name": "App s7.bench.test",
       "description": "Grüße from s7.bench.test",
-      "favicon": "https://s7.bench.test/?v=1"
+      "favicon": "https://s7.bench.test?v=1"
      },
      "s8.bench.test": {
       "status": 200,
@@ -400,69 +400,32 @@
      }
     },
     "differences": [],
-    "intended": [
-     {
-      "host": "s13.bench.test",
-      "field": "favicon",
-      "expected": "https://s13.bench.test/up.png",
-      "value": "https://s13.bench.test/../up.png"
-     },
-     {
-      "host": "s2.bench.test",
-      "field": "favicon",
-      "expected": "https://s2.bench.test/up.png",
-      "value": "https://s2.bench.test/../up.png"
-     },
-     {
-      "host": "s29.bench.test",
-      "field": "favicon",
-      "expected": "https://s29.bench.test?v=1",
-      "value": "https://s29.bench.test/?v=1"
-     },
-     {
-      "host": "s35.bench.test",
-      "field": "favicon",
-      "expected": "https://s35.bench.test/up.png",
-      "value": "https://s35.bench.test/../up.png"
-     },
-     {
-      "host": "s40.bench.test",
-      "field": "favicon",
-      "expected": "https://s40.bench.test?v=1",
-      "value": "https://s40.bench.test/?v=1"
-     },
-     {
-      "host": "s7.bench.test",
-      "field": "favicon",
-      "expected": "https://s7.bench.test?v=1",
-      "value": "https://s7.bench.test/?v=1"
-     }
-    ]
+    "intended": []
    },
    "loc": {
-    "lines": 279,
-    "chars": 10128
+    "lines": 251,
+    "chars": 9365
    },
    "size": {
-    "gzipped": 11274503
+    "gzipped": 11258940
    },
    "startup": {
-    "fromStart": 59.38805394531251
+    "fromStart": 63.06289665625
    },
    "load": {
-    "idle": 33.9375,
-    "peak": 74.09375,
-    "staticRps": 33624.13,
-    "apiRps": 2233.37
+    "idle": 34.12109375,
+    "peak": 79.4296875,
+    "staticRps": 33288.88,
+    "apiRps": 4996.6
    },
    "build": {
-    "ms": 87547.08319099998,
+    "ms": 87473.77093099995,
     "all": [
-     87547.08319099998,
-     87207.37596199999,
-     86448.02740299999,
-     95334.896725,
-     88219.05718100001
+     89115.25770199997,
+     89498.953095,
+     87473.77093099995,
+     86228.94253499992,
+     86528.11163499998
     ]
    }
   }
