@@ -1,31 +1,38 @@
 // Renders results as Markdown, with every value also relative to the first entry. An entry holds the results of
 // one implementation: { name, commit, date, machine, counts, results: { phase: result } }. The entries can come
-// from one run (main.mjs) or from separate runs (wiki.mjs).
+// from one run (main.mjs) or from separate runs (markdown.mjs, pages.mjs).
+import { readFileSync } from 'node:fs';
+
 const mb = bytes => `${(bytes / 1e6).toFixed(1)} MB`;
 const thousands = value => Math.round(value).toLocaleString('en-US');
 
-// [label, phase, value of a result, format, true if higher is better]
-const ROWS = [
-  ['**Image size**, gzipped', 'size', r => r.gzipped, mb],
-  ['**Build time**, uncached', 'build', r => r.ms / 1000, v => `${v.toFixed(1)} s`],
-  ['**Startup**, process start to first 200', 'startup', r => r.fromStart, v => `${v.toFixed(0)} ms`],
-  ['**RAM** idle (RSS)', 'load', r => r.idle, v => `${v.toFixed(1)} MB`],
-  ['RAM peak (`VmHWM`)', 'load', r => r.peak, v => `${v.toFixed(1)} MB`],
-  ['**Throughput**, static file, 64 connections', 'load', r => r.staticRps, v => `${thousands(v)} rps`, true],
-  ['Throughput, cached API, 1 connection', 'load', r => r.apiRps, v => `${thousands(v)} rps`, true],
-  ['**Code** in `backend/` and `Dockerfile`, lines', 'loc', r => r.lines, thousands],
-  ['Code, non-whitespace characters', 'loc', r => r.chars, thousands],
+// [header, phase, value of a result, format, true if higher is better]. See "Measured" in the README.
+const COLUMNS = [
+  ['Image', 'size', r => r.gzipped, mb],
+  ['Build', 'build', r => r.ms / 1000, v => `${v.toFixed(1)} s`],
+  ['Startup', 'startup', r => r.fromStart, v => `${v.toFixed(0)} ms`],
+  ['RAM idle', 'load', r => r.idle, v => `${v.toFixed(1)} MB`],
+  ['RAM peak', 'load', r => r.peak, v => `${v.toFixed(1)} MB`],
+  ['Static', 'load', r => r.staticRps, v => `${thousands(v)} rps`, true],
+  ['API', 'load', r => r.apiRps, v => `${thousands(v)} rps`, true],
+  ['Lines', 'loc', r => r.lines, thousands],
+  ['Chars', 'loc', r => r.chars, thousands],
 ];
+export const LEGEND = 'Image: gzipped. Build: uncached. Startup: process start to first 200. RAM: RSS when idle, peak ' +
+  '`VmHWM`. Static and API: throughput on a static file with 64 connections, on the cached API with 1. ' +
+  'Lines and Chars: lines and non-whitespace characters of the code in `backend/` and the `Dockerfile`.';
+
+export const short = name => name.replace(/^experiments\//, '');
 
 function relative(value, ref, higherIsBetter) {
-  if (!ref || value === ref) return '';
   const ratio = value / ref;
+  if (!ref || Math.round((ratio - 1) * 100) === 0) return '';
   if (higherIsBetter || (ratio > 0.5 && ratio < 2)) return ` (${ratio > 1 ? '+' : ''}${((ratio - 1) * 100).toFixed(0)}%)`;
   return ` (${ratio.toFixed(1)}x)`;
 }
 
 // When and where an entry was measured, with the number of repetitions of the phases it has.
-function runOf({ date, machine, counts, results }) {
+export function runOf({ date, machine, counts, results }) {
   const repeated = [results.load || results.build ? `${counts.runs} runs of load and build` : '',
     results.startup ? `${counts.startupRuns} starts` : ''].filter(Boolean);
   return `${date} on ${machine}${repeated.length ? `, ${repeated.join(', ')}` : ''}`;
@@ -36,31 +43,37 @@ function measured(entries) {
   if (runs.every(r => r === runs[0])) return [`Measured ${runs[0]}.`];
   return ['Each implementation was measured in a separate run, maybe on another machine. The variance between runs ' +
     'is larger than within a run, see "Comparing fairly" in the README of the branch `benchmark`.', '',
-    ...entries.map((e, i) => `- \`${e.name}\` (${e.commit}): ${runs[i]}.`)];
+    ...entries.map((e, i) => `- \`${short(e.name)}\` (${e.commit}): ${runs[i]}.`)];
+}
+
+// Reads the JSON files of ./run.sh --json: main first, then the others by name.
+export function readEntries(files) {
+  const entries = files.flatMap(f => JSON.parse(readFileSync(f, 'utf8')));
+  return entries.sort((a, b) => (b.name === 'main') - (a.name === 'main') || a.name.localeCompare(b.name));
+}
+
+// One row per implementation, one column per measurement: { headers, rows: [{ entry, cells: [{ value, text }] }] }.
+export function table(entries) {
+  const columns = COLUMNS.filter(([, phase]) => entries.some(e => e.results[phase]));
+  const rows = entries.map(entry => ({
+    entry,
+    cells: columns.map(([, phase, pick, format, higherIsBetter]) => {
+      if (!entry.results[phase]) return { value: null, text: '-' };
+      const value = pick(entry.results[phase]), ref = entries[0].results[phase] && pick(entries[0].results[phase]);
+      return { value, text: format(value) + relative(value, ref, higherIsBetter) };
+    }),
+  }));
+  return { headers: columns.map(([header]) => header), rows };
 }
 
 export function report(entries) {
+  const { headers, rows } = table(entries);
   const out = ['# Benchmark results', '', ...measured(entries), ''];
-  out.push(`| Metric | ${entries.map(e => `\`${e.name}\` (${e.commit})`).join(' | ')} |`);
-  out.push(`| --- | ${entries.map(() => '---:').join(' | ')} |`);
-  for (const [label, phase, pick, format, higherIsBetter] of ROWS) {
-    if (!entries.some(e => e.results[phase])) continue;
-    const values = entries.map(e => e.results[phase] && pick(e.results[phase]));
-    const cells = values.map(v => v === undefined ? '-' : format(v) + relative(v, values[0], higherIsBetter));
-    out.push(`| ${label} | ${cells.join(' | ')} |`);
+  out.push(`| Branch | Commit | ${headers.join(' | ')} |`);
+  out.push(`| --- | --- | ${headers.map(() => '---:').join(' | ')} |`);
+  for (const { entry, cells } of rows) {
+    out.push(`| \`${short(entry.name)}\` | ${entry.commit} | ${cells.map(c => c.text).join(' | ')} |`);
   }
-  out.push('', `Medians. Percentages and factors are relative to \`${entries[0].name}\`.`);
-
-  const checked = entries.filter(e => e.results.diff);
-  if (checked.length) out.push('', '## API output compared with the expected one', '');
-  for (const { name, results: { diff } } of checked) {
-    const { hosts, problems, differences } = diff;
-    const verdict = differences.length ? `${differences.length} differences` : 'as expected';
-    out.push(`- \`${name}\`: ${hosts} hosts, ${verdict}${problems.length ? `, **${problems.length} problems**` : ''}`);
-    for (const p of problems) out.push(`  - ${p}`);
-    for (const d of differences) {
-      out.push(`  - ${d.host} \`${d.field}\`: expected \`${JSON.stringify(d.expected)}\`, got \`${JSON.stringify(d.value)}\``);
-    }
-  }
+  out.push('', `Medians. Percentages and factors are relative to \`${short(entries[0].name)}\`. ${LEGEND}`);
   return out.join('\n') + '\n';
 }

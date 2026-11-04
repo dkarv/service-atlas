@@ -56,6 +56,15 @@ function differences(output) {
   return found;
 }
 
+// Throws unless every implementation passed the HTTP contract and returned the expected API output.
+export function verify(results) {
+  const failed = Object.entries(results).flatMap(([name, { problems, differences }]) => [
+    ...problems.map(p => `${name}: ${p}`),
+    ...differences.map(d => `${name}: ${d.host} ${d.field}: expected ${JSON.stringify(d.expected)}, got ${JSON.stringify(d.value)}`),
+  ]);
+  if (failed.length) throw new Error(`Unexpected HTTP responses or API output:\n${failed.join('\n')}`);
+}
+
 // Lines of the code in backend/, where every implementation keeps all of its code, and of the Dockerfile.
 // Docs and hidden files don't count.
 export function loc(impls) {

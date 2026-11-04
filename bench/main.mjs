@@ -2,7 +2,7 @@
 import { parseArgs } from 'node:util';
 import { git, log, machine, setup, teardown } from './docker.mjs';
 import { build, load, size, startup } from './measure.mjs';
-import { diff, loc } from './checks.mjs';
+import { diff, loc, verify } from './checks.mjs';
 import { report } from './report.mjs';
 
 const PHASES = { diff, loc, size, startup, load, build };
@@ -15,7 +15,7 @@ Options:
   --runs N           runs of the load and build phases (default 3)
   --startup-runs N   container starts per implementation (default 20)
   --phases LIST      comma separated, default: ${Object.keys(PHASES).join(',')}
-  --json             write the results as JSON instead of Markdown, for bench/wiki.mjs
+  --json             write the results as JSON instead of Markdown, for bench/markdown.mjs and bench/pages.mjs
   -h, --help         show this help`;
 
 function fail(message) {
@@ -86,6 +86,8 @@ try {
   for (const phase of phases) {
     log(`Phase ${phase}`);
     results[phase] = await PHASES[phase](impls, counts);
+    // Stops early, but keeps the output in the JSON to write bench/expected.json from it.
+    if (phase === 'diff') verify(results.diff);
   }
 } catch (e) {
   failure = e;
