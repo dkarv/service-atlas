@@ -13,16 +13,16 @@ With AI-assisted programming it has become easy to build large, complicated syst
 <!-- loc:start -->
 | File | Lines | Description |
 | --- | ---: | --- |
-| **Backend** | **150** | |
-| `backend/server.mjs` | 150 | crt.sh lookup, service checks, cache, API, static files |
-| **Frontend** | **297** | |
+| **Backend** | **148** | |
+| `backend/server.mjs` | 148 | crt.sh lookup, service checks, cache, API, static files |
+| **Frontend** | **291** | |
 | `frontend/blades.min.css` | 144 | Vendored Blades CSS (Pico fork) |
-| `frontend/main.js` | 76 | Loads, sorts and renders the services |
-| `frontend/style.css` | 45 | Custom styles on top of Blades |
+| `frontend/main.js` | 73 | Loads, sorts and renders the services |
+| `frontend/style.css` | 42 | Custom styles on top of Blades |
 | `frontend/index.html` | 32 | Page skeleton and card template |
 | **Dockerfile** | **10** | |
 | `Dockerfile` | 10 | Node.js container image |
-| **Total** | **457** | |
+| **Total** | **449** | |
 <!-- loc:end -->
 
 
@@ -68,4 +68,3 @@ The JSON API returns the same results for the benchmark mock, apart from these d
 - Error messages are Node's, e.g. `getaddrinfo ENOTFOUND dead0.example.com`, and requests send `User-Agent: service-atlas`.
 - Timestamps have millisecond instead of nanosecond precision, and a reset `checked_at` is `null` in the cache file.
 - `fetch` follows up to 20 redirects, Go's client 10.
-- Probing still runs one service after the other, but Node keeps answering other requests meanwhile.

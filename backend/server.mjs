@@ -104,21 +104,19 @@ const age = time => Date.now() - (Date.parse(time) || 0);
 async function getServices(domain, refresh) {
   // basename keeps the domain from escaping the cache directory.
   const file = new URL(`${basename(domain)}.json`, CACHE);
-  let e = {};
+  let e = { fetched_at: '0001-01-01T00:00:00Z' }; // Go's zero time
   try {
     e = JSON.parse(await readFile(file, 'utf8'));
   } catch {}
   if (refresh || age(e.fetched_at) > TTL) {
     // On errors keep the cached list, crt.sh is flaky.
     try {
-      e = { fetched_at: new Date().toISOString(), checked_at: null, services: await fetchSubdomains(domain) };
+      e = { fetched_at: new Date().toISOString(), checked_at: null, subdomains: await fetchSubdomains(domain) };
     } catch {}
   }
   if (refresh || age(e.checked_at) > CHECK_TTL) {
-    // One after the other, as in Go.
-    const services = [];
-    for (const s of e.services ?? []) services.push(await probe(s));
-    e = { ...e, checked_at: new Date().toISOString(), services };
+    const subdomains = await Promise.all((e.subdomains ?? []).map(probe));
+    e = { ...e, checked_at: new Date().toISOString(), subdomains };
     // Written to a temporary file and renamed, so concurrent requests never read a partial file.
     await mkdir(CACHE, { recursive: true });
     const tmp = new URL(`${basename(domain)}.json.${process.pid}.${Math.random()}`, CACHE);
@@ -134,7 +132,7 @@ createServer(async (req, res) => {
     try {
       const e = await getServices((url.searchParams.get('domain') ?? '').toLowerCase(), url.searchParams.has('refresh'));
       res.writeHead(200, { 'content-type': 'application/json' });
-      return res.end(JSON.stringify({ subdomains: e.services ?? [], checked_at: e.checked_at }));
+      return res.end(JSON.stringify(e));
     } catch (err) {
       // E.g. a cache directory that isn't writable. Unhandled, it would stop the whole process.
       console.error(err);
