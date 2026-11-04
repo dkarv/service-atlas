@@ -1,26 +1,19 @@
 {
   "name": "service-atlas",
-  "image": "mcr.microsoft.com/devcontainers/go:1.22",
+  "image": "dunglas/frankenphp:1-php8.5",
   "forwardPorts": [8080],
   "customizations": {
     "vscode": {
       "extensions": [
-        "golang.go"
-      ],
-      "settings": {
-        "go.toolsManagement.autoUpdate": true,
-        "go.useLanguageServer": true,
-        "go.lintTool": "golangci-lint"
-      }
+        "bmewburn.vscode-intelephense-client"
+      ]
     }
   },
   "portsAttributes": {
     "8080": {
-      "label": "Go application",
+      "label": "PHP application",
       "onAutoForward": "openBrowser"
     }
   },
-  "postCreateCommand": "cd backend && go mod download",
-  "postStartCommand": "rm -rf backend/frontend && cp -r frontend backend/ && cd backend && go run .",
-  "remoteUser": "vscode"
+  "postStartCommand": "frankenphp run --config backend/Caddyfile"
 }

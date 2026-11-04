@@ -1,0 +1,17 @@
+# FrankenPHP: Caddy with PHP built in. Paths are relative to the working directory, the root of the repository.
+{
+	frankenphp
+	admin off
+}
+
+:8080 {
+	handle /api/subdomains {
+		root * backend
+		rewrite * /api.php
+		php
+	}
+	handle {
+		root * frontend
+		file_server
+	}
+}
