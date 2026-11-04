@@ -13,8 +13,8 @@ With AI-assisted programming it has become easy to build large, complicated syst
 <!-- loc:start -->
 | File | Lines | Description |
 | --- | ---: | --- |
-| **Backend** | **148** | |
-| `backend/server.mjs` | 148 | crt.sh lookup, service checks, cache, API, static files |
+| **Backend** | **139** | |
+| `backend/server.mjs` | 139 | crt.sh lookup, service checks, cache, API, static files |
 | **Frontend** | **291** | |
 | `frontend/blades.min.css` | 144 | Vendored Blades CSS (Pico fork) |
 | `frontend/main.js` | 73 | Loads, sorts and renders the services |
@@ -22,7 +22,7 @@ With AI-assisted programming it has become easy to build large, complicated syst
 | `frontend/index.html` | 32 | Page skeleton and card template |
 | **Dockerfile** | **10** | |
 | `Dockerfile` | 10 | Node.js container image |
-| **Total** | **449** | |
+| **Total** | **440** | |
 <!-- loc:end -->
 
 

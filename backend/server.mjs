@@ -11,12 +11,12 @@ const MANIFEST_RE = /<link[^>]+rel=["']?manifest["']?[^>]*>/is;
 const ICON_RE = /<link[^>]+rel=["'][^"']*icon[^"']*["'][^>]*>/is;
 const HREF_RE = /href=["']([^"']+)["']/is;
 const CACHE = new URL('../cache/', import.meta.url);
-const TYPES = { html: 'text/html; charset=utf-8', css: 'text/css; charset=utf-8', js: 'text/javascript; charset=utf-8',
-  png: 'image/png', svg: 'image/svg+xml', ico: 'image/x-icon' };
+const TYPES = { html: 'text/html; charset=utf-8', css: 'text/css; charset=utf-8', js: 'text/javascript; charset=utf-8' };
 
 // The frontend is read once at startup, so only these files can be served.
 const frontend = new URL('../frontend/', import.meta.url);
-const files = new Map(readdirSync(frontend).map(f => [`/${f}`, readFileSync(new URL(f, frontend))]));
+const files = new Map(readdirSync(frontend).map(f => [`/${f}`,
+  { body: readFileSync(new URL(f, frontend)), type: TYPES[f.split('.').pop()] ?? 'application/octet-stream' }]));
 files.set('/', files.get('/index.html'));
 
 // Like Go, trust the CA certificates in SSL_CERT_FILE in addition to the default ones.
@@ -42,14 +42,10 @@ async function fetchSubdomains(domain) {
   const certs = JSON.parse(body);
   if (!Array.isArray(certs)) throw new Error('unexpected crt.sh response');
   const latest = new Map();
-  for (const c of certs) {
+  for (const c of certs) for (const name of String(c?.name_value ?? '').toLowerCase().split(/\s+/)) {
+    // ISO timestamps compare as strings.
     const issued = String(c?.not_before ?? '');
-    for (const name of String(c?.name_value ?? '').toLowerCase().split(/\s+/)) {
-      // ISO timestamps compare as strings.
-      if (name.endsWith(`.${domain}`) && !name.startsWith('*') && issued > (latest.get(name) ?? '')) {
-        latest.set(name, issued);
-      }
-    }
+    if (name.endsWith(`.${domain}`) && !name.startsWith('*') && issued > (latest.get(name) ?? '')) latest.set(name, issued);
   }
   return [...latest].map(([host, issued]) => ({ host, issued }));
 }
@@ -104,15 +100,12 @@ const age = time => Date.now() - (Date.parse(time) || 0);
 async function getServices(domain, refresh) {
   // basename keeps the domain from escaping the cache directory.
   const file = new URL(`${basename(domain)}.json`, CACHE);
-  let e = { fetched_at: '0001-01-01T00:00:00Z' }; // Go's zero time
-  try {
-    e = JSON.parse(await readFile(file, 'utf8'));
-  } catch {}
+  // Without a cache file, fetched_at is Go's zero time.
+  let e = await readFile(file, 'utf8').then(JSON.parse).catch(() => ({ fetched_at: '0001-01-01T00:00:00Z' }));
   if (refresh || age(e.fetched_at) > TTL) {
     // On errors keep the cached list, crt.sh is flaky.
-    try {
-      e = { fetched_at: new Date().toISOString(), checked_at: null, subdomains: await fetchSubdomains(domain) };
-    } catch {}
+    const fetched_at = new Date().toISOString();
+    e = await fetchSubdomains(domain).then(subdomains => ({ fetched_at, checked_at: null, subdomains }), () => e);
   }
   if (refresh || age(e.checked_at) > CHECK_TTL) {
     const subdomains = await Promise.all((e.subdomains ?? []).map(probe));
@@ -131,8 +124,7 @@ createServer(async (req, res) => {
   if (url.pathname === '/api/subdomains') {
     try {
       const e = await getServices((url.searchParams.get('domain') ?? '').toLowerCase(), url.searchParams.has('refresh'));
-      res.writeHead(200, { 'content-type': 'application/json' });
-      return res.end(JSON.stringify(e));
+      return res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(e));
     } catch (err) {
       // E.g. a cache directory that isn't writable. Unhandled, it would stop the whole process.
       console.error(err);
@@ -141,8 +133,7 @@ createServer(async (req, res) => {
   }
   const file = files.get(url.pathname);
   if (!file) return res.writeHead(404, { 'content-type': 'text/plain' }).end('404 page not found\n');
-  const ext = url.pathname === '/' ? 'html' : url.pathname.split('.').pop();
-  res.writeHead(200, { 'content-type': TYPES[ext] ?? 'application/octet-stream' }).end(file);
+  res.writeHead(200, { 'content-type': file.type }).end(file.body);
 }).listen(8080);
 // As PID 1 in a container Node gets no default handler for SIGTERM.
 for (const signal of ['SIGTERM', 'SIGINT']) process.on(signal, () => process.exit());
