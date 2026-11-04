@@ -1,9 +1,9 @@
 [
  {
   "name": "experiments/python",
-  "commit": "05d9e19",
+  "commit": "29c90d7",
   "date": "2026-11-04",
-  "machine": "Ubuntu 26.04.1 LTS, kernel 7.0.0-1017-azure, 4 CPUs, 15.6 GB RAM, Docker 29.4.2",
+  "machine": "Ubuntu 26.04.1 LTS, kernel 7.0.0-1019-azure, 4 CPUs, 15.6 GB RAM, Docker 29.4.2",
   "counts": {
    "runs": 5,
    "startupRuns": 30
@@ -403,29 +403,29 @@
     "intended": []
    },
    "loc": {
-    "lines": 129,
-    "chars": 4599
+    "lines": 130,
+    "chars": 4894
    },
    "size": {
-    "gzipped": 16739178
+    "gzipped": 16739116
    },
    "startup": {
-    "fromStart": 476.847339265625
+    "fromStart": 413.65763886718753
    },
    "load": {
-    "idle": 22.47265625,
-    "peak": 49.125,
-    "staticRps": 2612.68,
-    "apiRps": 3441.82
+    "idle": 24.01171875,
+    "peak": 49.45703125,
+    "staticRps": 16427.13,
+    "apiRps": 5120.72
    },
    "build": {
-    "ms": 847.9278380000032,
+    "ms": 428.0643620000046,
     "all": [
-     697.4605499999889,
-     896.7023970000155,
-     847.9278380000032,
-     735.0692550000094,
-     887.9186390000104
+     494.33654799999204,
+     439.29776200000197,
+     417.51215900000534,
+     428.0643620000046,
+     412.14181500000996
     ]
    }
   }
