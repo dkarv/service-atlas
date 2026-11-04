@@ -13,8 +13,8 @@ With AI-assisted programming it has become easy to build large, complicated syst
 <!-- loc:start -->
 | File | Lines | Description |
 | --- | ---: | --- |
-| **Backend** | **222** | |
-| `backend/src/main/kotlin/Services.kt` | 119 | crt.sh lookup, probing, cache |
+| **Backend** | **228** | |
+| `backend/src/main/kotlin/Services.kt` | 125 | crt.sh lookup, probing, cache |
 | `backend/src/main/kotlin/Http.kt` | 46 | HTTP client with timeouts and TLS trust |
 | `backend/src/main/kotlin/Main.kt` | 42 | HTTP server, API, static files |
 | `backend/build.gradle.kts` | 14 | Gradle build definition |
@@ -26,7 +26,7 @@ With AI-assisted programming it has become easy to build large, complicated syst
 | `frontend/index.html` | 32 | Page skeleton and card template |
 | **Dockerfile** | **23** | |
 | `Dockerfile` | 23 | Native image build, distroless container image |
-| **Total** | **536** | |
+| **Total** | **542** | |
 <!-- loc:end -->
 
 
