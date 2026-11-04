@@ -1,5 +1,5 @@
 *
-!build.gradle.kts
-!settings.gradle.kts
-!src
-!static
+!backend/build.gradle.kts
+!backend/settings.gradle.kts
+!backend/src
+!frontend

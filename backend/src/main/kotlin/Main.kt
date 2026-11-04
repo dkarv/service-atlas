@@ -15,7 +15,7 @@ class Asset(val type: String, val body: ByteArray)
 val types = mapOf("html" to "text/html", "js" to "text/javascript", "css" to "text/css")
 val assets = listOf("index.html", "main.js", "style.css", "blades.min.css").associate { file ->
     val type = types.getValue(file.substringAfterLast('.')) + "; charset=utf-8"
-    "/$file" to Asset(type, ClassLoader.getSystemResourceAsStream("static/$file")!!.readBytes())
+    "/$file" to Asset(type, ClassLoader.getSystemResourceAsStream("frontend/$file")!!.readBytes())
 }
 
 fun respond(ex: HttpExchange, status: Int, type: String, body: ByteArray) {

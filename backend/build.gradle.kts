@@ -10,5 +10,5 @@ dependencies { implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:
 
 application { mainClass = "MainKt" }
 
-// static/ stays at the top level, the binary embeds it as classpath resources.
-tasks.processResources { from("static") { into("static") } }
+// The frontend lives next to the backend, the binary embeds it as classpath resources.
+tasks.processResources { from("../frontend") { into("frontend") } }

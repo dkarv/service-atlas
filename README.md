@@ -13,16 +13,19 @@ With AI-assisted programming it has become easy to build large, complicated syst
 <!-- loc:start -->
 | File | Lines | Description |
 | --- | ---: | --- |
-| `static/blades.min.css` | 144 | Vendored Blades CSS (Pico fork) |
-| `src/main/kotlin/Services.kt` | 130 | Backend: crt.sh lookup, probing, cache |
-| `static/main.js` | 76 | Frontend: loads, sorts and renders the services |
-| `src/main/kotlin/Http.kt` | 56 | Backend: HTTP client with timeouts and TLS trust |
-| `src/main/kotlin/Main.kt` | 55 | Backend: HTTP server, API, static files |
-| `static/style.css` | 45 | Custom styles on top of Blades |
-| `static/index.html` | 32 | Page skeleton and card template |
+| **Backend** | **256** | |
+| `backend/src/main/kotlin/Services.kt` | 130 | crt.sh lookup, probing, cache |
+| `backend/src/main/kotlin/Http.kt` | 56 | HTTP client with timeouts and TLS trust |
+| `backend/src/main/kotlin/Main.kt` | 55 | HTTP server, API, static files |
+| `backend/build.gradle.kts` | 14 | Gradle build definition |
+| `backend/settings.gradle.kts` | 1 | Gradle project name |
+| **Frontend** | **297** | |
+| `frontend/blades.min.css` | 144 | Vendored Blades CSS (Pico fork) |
+| `frontend/main.js` | 76 | Loads, sorts and renders the services |
+| `frontend/style.css` | 45 | Custom styles on top of Blades |
+| `frontend/index.html` | 32 | Page skeleton and card template |
+| **Dockerfile** | **15** | |
 | `Dockerfile` | 15 | JVM container image |
-| `build.gradle.kts` | 14 | Gradle build definition |
-| `settings.gradle.kts` | 1 | Gradle project name |
 | **Total** | **568** | |
 <!-- loc:end -->
 
@@ -43,7 +46,7 @@ No configuration files. Just run and access via your domain. Optionally `SSL_CER
 ### Build & run locally
 
 ```bash
-gradle run
+cd backend && gradle run
 ```
 
 Requires JDK 25 and Gradle. There is deliberately no Gradle wrapper, as `gradlew` alone would break the line limit.
