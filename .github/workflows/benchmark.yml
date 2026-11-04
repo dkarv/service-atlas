@@ -1,14 +1,14 @@
 name: Benchmark
 
-# Benchmarks the pushed branch alone and adds its results to the wiki page Benchmark, next to the latest results of
-# the other branches. The benchmark lives on the branch benchmark, see its README.
+# Benchmarks the pushed branch alone and publishes its results on GitHub Pages, next to the latest results of the
+# other branches. The benchmark and the scripts called here live on the branch benchmark, see its README.
 on:
   push:
     branches: [main, "experiments/**"]
   workflow_dispatch:
 
 permissions:
-  contents: write # the wiki is a git repository that needs write access
+  contents: write # to push the results to the branch gh-pages
 
 # A newer push to the same branch replaces a running benchmark.
 concurrency:
@@ -37,26 +37,10 @@ jobs:
         if: always()
         run: |
           [ -s result.json ] || exit 0
-          node bench/wiki.mjs result.json >> "$GITHUB_STEP_SUMMARY"
+          node bench/markdown.mjs result.json >> "$GITHUB_STEP_SUMMARY"
 
-      # The wiki keeps the latest JSON of every branch in benchmark-data/ and renders all of them into Benchmark.md.
-      - name: Update the wiki
+      # The branch gh-pages keeps the latest JSON of every branch and renders all of them into index.html.
+      - name: Publish on GitHub Pages
         env:
-          TOKEN: ${{ github.token }}
-        run: |
-          git clone -q --depth=1 "https://x-access-token:$TOKEN@github.com/$GITHUB_REPOSITORY.wiki.git" wiki
-          cd wiki
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # Other branches may update the wiki at the same time: if the push is rejected, retry on their version.
-          for attempt in 1 2 3 4 5; do
-            mkdir -p benchmark-data
-            cp ../result.json "benchmark-data/${BRANCH//\//-}.json"
-            node ../bench/wiki.mjs benchmark-data/*.json > Benchmark.md
-            git add -A
-            git diff --cached --quiet || git commit -q -m "Benchmark $BRANCH at ${GITHUB_SHA::7}"
-            git push -q && exit 0
-            sleep $((attempt * 5))
-            git fetch -q origin && git reset -q --hard '@{u}'
-          done
-          exit 1
+          GITHUB_TOKEN: ${{ github.token }}
+        run: bench/publish.sh "$BRANCH" result.json
