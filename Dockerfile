@@ -1,23 +1,15 @@
-FROM gradle:9.8.2-jdk25-alpine AS jars
+FROM gradle:9.8.2-jdk25-alpine AS build
 WORKDIR /app
 COPY build.gradle.kts settings.gradle.kts ./
 COPY src ./src
 COPY static ./static
-RUN gradle --no-daemon --quiet installDist
+RUN gradle --no-daemon --quiet installDist && mkdir cache
 
-# Static musl binary: embeds the static files and the CA certificates
-FROM ghcr.io/graalvm/native-image-community:25-muslib AS native
+# Standard JVM image with default settings, runs as an unprivileged user
+FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
-COPY --from=jars /app/build/install/service-atlas/lib ./lib
-RUN native-image --static --libc=musl --no-fallback --install-exit-handlers \
-      -Os -R:MaxHeapSize=64m -H:IncludeResources='static/.*' \
-      --limit-modules=java.base,java.net.http,jdk.httpserver,jdk.crypto.ec \
-      -cp 'lib/*' MainKt -o app && mkdir cache
-
-# Static distroless image: no shell, runs as nonroot
-FROM gcr.io/distroless/static-debian12:nonroot
-WORKDIR /app
-COPY --from=native /app/app .
-COPY --from=native --chown=nonroot:nonroot /app/cache ./cache
+COPY --from=build /app/build/install/service-atlas/lib ./lib
+COPY --from=build --chown=65532:65532 /app/cache ./cache
+USER 65532:65532
 EXPOSE 8080
-CMD ["/app/app"]
+CMD ["java", "-cp", "lib/*", "MainKt"]

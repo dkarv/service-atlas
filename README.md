@@ -2,7 +2,7 @@
 
 Minimal service that generates a service overview homepage from Certificate Transparency (CT) logs.
 
-> **Experimental branch:** a port of the Go backend on `main` to Kotlin, compiled to a static binary with GraalVM Native Image. For self-hosting use `main`. How the implementations compare is measured on the [`benchmark`](https://github.com/dkarv/service-atlas/tree/benchmark) branch.
+> **Experimental branch:** a port of the Go backend on `main` to Kotlin, running on a standard JVM. `experiments/kotlin-graalvm` compiles the same code to a native binary. For self-hosting use `main`. How the implementations compare is measured on the [`benchmark`](https://github.com/dkarv/service-atlas/tree/benchmark) branch.
 
 ![Screenshot of the service overview](.github/assets/screenshot.png)
 
@@ -20,10 +20,10 @@ With AI-assisted programming it has become easy to build large, complicated syst
 | `src/main/kotlin/Main.kt` | 55 | Backend: HTTP server, API, static files |
 | `static/style.css` | 45 | Custom styles on top of Blades |
 | `static/index.html` | 32 | Page skeleton and card template |
-| `Dockerfile` | 23 | Native image build, distroless container image |
+| `Dockerfile` | 15 | JVM container image |
 | `build.gradle.kts` | 14 | Gradle build definition |
 | `settings.gradle.kts` | 1 | Gradle project name |
-| **Total** | **576** | |
+| **Total** | **568** | |
 <!-- loc:end -->
 
 
@@ -57,15 +57,7 @@ docker build -t service-atlas .
 docker run --rm -p 8080:8080 -v service-atlas-cache:/app/cache service-atlas
 ```
 
-The image contains a static musl binary on `distroless/static`. The published `ghcr.io/dkarv/service-atlas` images are built from `main`.
-
-
-## Native Image settings
-
-- `-Os` optimizes for size, `-O2` made the binary 7 MB larger.
-- `--limit-modules` leaves out RMI, JNDI and LDAP, which TLS would otherwise pull in.
-- `-R:MaxHeapSize=64m` caps the heap. Without it Serial GC may grow up to 80% of the RAM. The crt.sh response is decoded as a stream, so even a 6 MB heap handled 7 MB of JSON.
-- `--install-exit-handlers` lets the binary stop on SIGTERM when it runs as PID 1.
+The image runs the jars on `eclipse-temurin:25-jre-alpine` with the default JVM settings. The published `ghcr.io/dkarv/service-atlas` images are built from `main`.
 
 
 ## Differences from the Go version

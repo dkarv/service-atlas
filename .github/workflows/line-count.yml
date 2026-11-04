@@ -27,7 +27,7 @@ jobs:
               "static/index.html": "Page skeleton and card template",
               "static/style.css": "Custom styles on top of Blades",
               "static/blades.min.css": "Vendored Blades CSS (Pico fork)",
-              "Dockerfile": "Native image build, distroless container image",
+              "Dockerfile": "JVM container image",
               "build.gradle.kts": "Gradle build definition",
               "settings.gradle.kts": "Gradle project name",
           }
