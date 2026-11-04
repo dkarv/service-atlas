@@ -20,7 +20,7 @@
       "onAutoForward": "openBrowser"
     }
   },
-  "postCreateCommand": "go mod download",
-  "postStartCommand": "go run .'",
+  "postCreateCommand": "cd backend && go mod download",
+  "postStartCommand": "rm -rf backend/frontend && cp -r frontend backend/ && cd backend && go run .",
   "remoteUser": "vscode"
 }

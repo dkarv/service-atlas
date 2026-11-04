@@ -25,8 +25,8 @@ var (
 	hrefRe      = regexp.MustCompile(`(?is)href=["']([^"']+)["']`)
 )
 
-//go:embed static/*
-var embedFS embed.FS
+//go:embed frontend/*
+var embedFS embed.FS // the Dockerfile copies frontend/ here before building
 
 type service struct {
 	Host        string `json:"host"`
@@ -141,7 +141,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	staticFS, _ := fs.Sub(embedFS, "static")
+	staticFS, _ := fs.Sub(embedFS, "frontend")
 	http.Handle("/", http.FileServer(http.FS(staticFS)))
 	http.HandleFunc("/api/subdomains", apiHandler)
 	log.Fatal(http.ListenAndServe(":8080", nil))

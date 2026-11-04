@@ -11,13 +11,16 @@ With AI-assisted programming it has become easy to build large, complicated syst
 <!-- loc:start -->
 | File | Lines | Description |
 | --- | ---: | --- |
-| `main.go` | 148 | Backend: crt.sh lookup, service checks, cache, API |
-| `static/blades.min.css` | 144 | Vendored Blades CSS (Pico fork) |
-| `static/main.js` | 76 | Frontend: loads, sorts and renders the services |
-| `static/style.css` | 45 | Custom styles on top of Blades |
-| `static/index.html` | 32 | Page skeleton and card template |
+| **Backend** | **151** | |
+| `backend/main.go` | 148 | crt.sh lookup, service checks, cache, API |
+| `backend/go.mod` | 3 | Go module definition |
+| **Frontend** | **297** | |
+| `frontend/blades.min.css` | 144 | Vendored Blades CSS (Pico fork) |
+| `frontend/main.js` | 76 | Loads, sorts and renders the services |
+| `frontend/style.css` | 45 | Custom styles on top of Blades |
+| `frontend/index.html` | 32 | Page skeleton and card template |
+| **Dockerfile** | **13** | |
 | `Dockerfile` | 13 | Distroless container image |
-| `go.mod` | 3 | Go module definition |
 | **Total** | **461** | |
 <!-- loc:end -->
 
@@ -38,9 +41,9 @@ No configuration files, no environment variables. Just run and access via your d
 ### Build & run locally
 
 ```bash
-go mod init github.com/dkarv/service-atlas
-go mod tidy
-go run .
+# The frontend is embedded into the binary, so copy it next to main.go first (git-ignored)
+rm -rf backend/frontend && cp -r frontend backend/
+cd backend && go run .
 ```
 
 Open `http://localhost:8080` in your browser.
