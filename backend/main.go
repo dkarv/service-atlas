@@ -125,10 +125,10 @@ func getServices(domain string, refresh bool) cacheEntry {
 			e.Services[i] = probe(e.Services[i])
 		}
 		e.CheckedAt = time.Now()
+		data, _ := json.Marshal(e)
+		os.MkdirAll("cache", 0o755)
+		os.WriteFile(file, data, 0o644)
 	}
-	data, _ := json.Marshal(e)
-	os.MkdirAll("cache", 0o755)
-	os.WriteFile(file, data, 0o644)
 	return e
 }
 
