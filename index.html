@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>service-atlas benchmark</title>
+<style>
+:root { --bg: #fff; --fg: #1f2328; --muted: #59636e; --line: #d1d9e0; --head: #f6f8fa; --accent: #0969da; color-scheme: light dark; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #0d1117; --fg: #e6edf3; --muted: #9198a1; --line: #3d444d; --head: #151b23; --accent: #4493f8; }
+}
+body { margin: 0 auto; max-width: 1100px; padding: 24px 16px; background: var(--bg); color: var(--fg);
+  font: 15px/1.5 system-ui, sans-serif; }
+h1 { font-size: 24px; margin: 0 0 8px; }
+p, li { color: var(--muted); }
+a { color: var(--accent); }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { border-bottom: 1px solid var(--line); padding: 6px 10px; text-align: left; white-space: nowrap; }
+th { background: var(--head); }
+.num { text-align: right; }
+th button { all: unset; cursor: pointer; font-weight: 600; }
+th button::after { content: " \2195"; color: var(--muted); }
+th[aria-sort=ascending] button::after { content: " \2191"; color: var(--fg); }
+th[aria-sort=descending] button::after { content: " \2193"; color: var(--fg); }
+code { font: 13px ui-monospace, monospace; }
+</style>
+</head>
+<body>
+<h1>service-atlas benchmark</h1>
+<p>One row per branch of <a href="https://github.com/dkarv/service-atlas">dkarv/service-atlas</a>. Click a header to sort.
+Medians. Percentages and factors are relative to <code>main</code>. Image: gzipped. Build: uncached. Startup: process start to first 200. RAM: RSS when idle, peak <code>VmHWM</code>. Static and API: throughput on a static file with 64 connections, on the cached API with 1. Lines and Chars: lines and non-whitespace characters of the code in <code>backend/</code> and the <code>Dockerfile</code>.</p>
+<div class="scroll"><table>
+<thead><tr><th><button type="button">Branch</button></th><th><button type="button">Commit</button></th><th class="num"><button type="button">Image</button></th><th class="num"><button type="button">Build</button></th><th class="num"><button type="button">Startup</button></th><th class="num"><button type="button">RAM idle</button></th><th class="num"><button type="button">RAM peak</button></th><th class="num"><button type="button">Static</button></th><th class="num"><button type="button">API</button></th><th class="num"><button type="button">Lines</button></th><th class="num"><button type="button">Chars</button></th></tr></thead>
+<tbody>
+<tr title="2026-11-04 on Ubuntu 26.04.1 LTS, kernel 7.0.0-1019-azure, 4 CPUs, 15.6 GB RAM, Docker 29.4.2, 5 runs of load and build, 30 starts"><td data-v="main"><code>main</code></td><td data-v="7bdc15b"><a href="https://github.com/dkarv/service-atlas/commit/7bdc15b">7bdc15b</a></td><td class="num" data-v="3307238">3.3 MB</td><td class="num" data-v="10.908716468999977">10.9 s</td><td class="num" data-v="86.51009206250001">87 ms</td><td class="num" data-v="6.6640625">6.7 MB</td><td class="num" data-v="39.55859375">39.6 MB</td><td class="num" data-v="16755.41">16,755 rps</td><td class="num" data-v="2087.03">2,087 rps</td><td class="num" data-v="164">164</td><td class="num" data-v="4239">4,239</td></tr>
+</tbody>
+</table></div>
+<p>Each branch was measured in a separate run on a GitHub runner (shared hardware), so build time, startup, RAM and
+throughput are rough. Size and code are exact. See "Comparing fairly" in the
+<a href="https://github.com/dkarv/service-atlas/tree/benchmark#comparing-fairly">README of the branch <code>benchmark</code></a>.</p>
+<ul><li><code>main</code> (7bdc15b): 2026-11-04 on Ubuntu 26.04.1 LTS, kernel 7.0.0-1019-azure, 4 CPUs, 15.6 GB RAM, Docker 29.4.2, 5 runs of load and build, 30 starts</li></ul>
+<script>
+// Numbers sort by value, text by name; rows without a value stay at the end.
+const tbody = document.querySelector('tbody');
+document.querySelectorAll('th').forEach((th, i) => th.querySelector('button').addEventListener('click', () => {
+  const dir = th.getAttribute('aria-sort') === 'ascending' ? -1 : 1;
+  document.querySelectorAll('th').forEach(other => other.removeAttribute('aria-sort'));
+  th.setAttribute('aria-sort', dir > 0 ? 'ascending' : 'descending');
+  const key = tr => tr.children[i].dataset.v;
+  [...tbody.rows].sort((a, b) => {
+    const [x, y] = [key(a), key(b)];
+    if (x === '' || y === '') return (x === '') - (y === '');
+    return dir * (th.classList.contains('num') ? x - y : x.localeCompare(y));
+  }).forEach(tr => tbody.append(tr));
+}));
+</script>
+</body>
+</html>
