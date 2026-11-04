@@ -1,8 +1,0 @@
-[
- { "host": "s2.bench.test", "field": "favicon", "value": "https://s2.bench.test/../up.png", "reason": "java.net.URI (RFC 2396) keeps ../ above the root" },
- { "host": "s13.bench.test", "field": "favicon", "value": "https://s13.bench.test/../up.png", "reason": "java.net.URI (RFC 2396) keeps ../ above the root" },
- { "host": "s35.bench.test", "field": "favicon", "value": "https://s35.bench.test/../up.png", "reason": "java.net.URI (RFC 2396) keeps ../ above the root" },
- { "host": "s7.bench.test", "field": "favicon", "value": "https://s7.bench.test/?v=1", "reason": "java.net.URI (RFC 2396) adds / to an empty base path" },
- { "host": "s29.bench.test", "field": "favicon", "value": "https://s29.bench.test/?v=1", "reason": "java.net.URI (RFC 2396) adds / to an empty base path" },
- { "host": "s40.bench.test", "field": "favicon", "value": "https://s40.bench.test/?v=1", "reason": "java.net.URI (RFC 2396) adds / to an empty base path" }
-]
