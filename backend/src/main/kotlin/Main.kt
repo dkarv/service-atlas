@@ -3,12 +3,6 @@ import com.sun.net.httpserver.HttpServer
 import java.net.InetSocketAddress
 import java.net.URI
 import java.net.URLDecoder
-import kotlin.time.Instant
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-
-@Serializable
-data class ApiResponse(val subdomains: List<Service>, @SerialName("checked_at") val checkedAt: Instant)
 
 class Asset(val type: String, val body: ByteArray)
 
@@ -39,7 +33,7 @@ fun handle(ex: HttpExchange) {
     if (path == "/api/subdomains") {
         val params = query(ex.requestURI)
         val entry = getServices(params["domain"].orEmpty().lowercase(), "refresh" in params)
-        val body = json.encodeToString(ApiResponse(entry.services, entry.checkedAt)).toByteArray()
+        val body = json.encodeToString(entry).toByteArray()
         return respond(ex, 200, "application/json", body)
     }
     val asset = assets[if (path == "/") "/index.html" else path]

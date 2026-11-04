@@ -3,6 +3,7 @@
 import java.io.File
 import java.net.URI
 import java.net.URLEncoder
+import java.util.concurrent.Callable
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
@@ -49,7 +50,7 @@ data class Service(
 data class CacheEntry(
     @SerialName("fetched_at") val fetchedAt: Instant = zeroTime,
     @SerialName("checked_at") val checkedAt: Instant = zeroTime,
-    val services: List<Service> = emptyList(),
+    @SerialName("subdomains") val services: List<Service> = emptyList(),
 )
 
 @Serializable
@@ -123,8 +124,9 @@ fun getServices(domain: String, refresh: Boolean): CacheEntry {
         runCatching { fetchSubdomains(domain) }.onSuccess { entry = CacheEntry(Clock.System.now(), zeroTime, it) }
     }
     if (refresh || expired(entry.checkedAt, checkTtl)) {
-        entry = entry.copy(services = entry.services.map(::probe), checkedAt = Clock.System.now())
+        val probes = entry.services.map { tasks.submit(Callable { probe(it) }) }
+        entry = entry.copy(services = probes.map { it.get() }, checkedAt = Clock.System.now())
+        runCatching { File("cache").mkdirs(); file.writeText(json.encodeToString(entry)) }
     }
-    runCatching { File("cache").mkdirs(); file.writeText(json.encodeToString(entry)) }
     return entry
 }
