@@ -1,21 +1,11 @@
-import java.io.File
-import java.io.InputStream
+import java.io.*
 import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
+import java.net.http.*
 import java.net.http.HttpResponse.BodyHandlers
 import java.security.KeyStore
 import java.security.cert.CertificateFactory
-import java.util.concurrent.Callable
-import java.util.concurrent.ExecutionException
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
-import javax.net.ssl.SSLContext
-import javax.net.ssl.TrustManager
-import javax.net.ssl.TrustManagerFactory
-import javax.net.ssl.X509TrustManager
+import java.util.concurrent.*
+import javax.net.ssl.*
 import kotlin.time.Duration
 
 /** Virtual threads for the HTTP server and client, like goroutines in the Go version. */

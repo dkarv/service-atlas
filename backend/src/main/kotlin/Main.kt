@@ -1,14 +1,5 @@
-import com.sun.net.httpserver.HttpExchange
-import com.sun.net.httpserver.HttpServer
-import java.net.InetSocketAddress
-import java.net.URI
-import java.net.URLDecoder
-import kotlin.time.Instant
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-
-@Serializable
-data class ApiResponse(val subdomains: List<Service>, @SerialName("checked_at") val checkedAt: Instant)
+import com.sun.net.httpserver.*
+import java.net.*
 
 class Asset(val type: String, val body: ByteArray)
 
@@ -39,8 +30,7 @@ fun handle(ex: HttpExchange) {
     if (path == "/api/subdomains") {
         val params = query(ex.requestURI)
         val entry = getServices(params["domain"].orEmpty().lowercase(), "refresh" in params)
-        val body = json.encodeToString(ApiResponse(entry.services, entry.checkedAt)).toByteArray()
-        return respond(ex, 200, "application/json", body)
+        return respond(ex, 200, "application/json", json.encodeToString(entry).toByteArray())
     }
     val asset = assets[if (path == "/") "/index.html" else path]
     if (asset != null) respond(ex, 200, asset.type, asset.body)
@@ -48,8 +38,5 @@ fun handle(ex: HttpExchange) {
 }
 
 fun main() {
-    val server = HttpServer.create(InetSocketAddress(8080), 0)
-    server.executor = tasks
-    server.createContext("/", ::handle)
-    server.start()
+    HttpServer.create(InetSocketAddress(8080), 0).apply { executor = tasks; createContext("/", ::handle); start() }
 }

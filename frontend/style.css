@@ -9,10 +9,6 @@
   gap: 0.5rem;
 }
 
-.services h5 a {
-  text-decoration: none;
-}
-
 .services h5 > span {
   min-width: 0;
   overflow: hidden;
@@ -25,6 +21,7 @@ header small {
   color: var(--pico-muted-color);
 }
 
+.services h5 a,
 header small a {
   text-decoration: none;
 }

@@ -13,20 +13,20 @@ With AI-assisted programming it has become easy to build large, complicated syst
 <!-- loc:start -->
 | File | Lines | Description |
 | --- | ---: | --- |
-| **Backend** | **256** | |
-| `backend/src/main/kotlin/Services.kt` | 130 | crt.sh lookup, probing, cache |
-| `backend/src/main/kotlin/Http.kt` | 56 | HTTP client with timeouts and TLS trust |
-| `backend/src/main/kotlin/Main.kt` | 55 | HTTP server, API, static files |
+| **Backend** | **222** | |
+| `backend/src/main/kotlin/Services.kt` | 119 | crt.sh lookup, probing, cache |
+| `backend/src/main/kotlin/Http.kt` | 46 | HTTP client with timeouts and TLS trust |
+| `backend/src/main/kotlin/Main.kt` | 42 | HTTP server, API, static files |
 | `backend/build.gradle.kts` | 14 | Gradle build definition |
 | `backend/settings.gradle.kts` | 1 | Gradle project name |
-| **Frontend** | **297** | |
+| **Frontend** | **291** | |
 | `frontend/blades.min.css` | 144 | Vendored Blades CSS (Pico fork) |
-| `frontend/main.js` | 76 | Loads, sorts and renders the services |
-| `frontend/style.css` | 45 | Custom styles on top of Blades |
+| `frontend/main.js` | 73 | Loads, sorts and renders the services |
+| `frontend/style.css` | 42 | Custom styles on top of Blades |
 | `frontend/index.html` | 32 | Page skeleton and card template |
 | **Dockerfile** | **15** | |
 | `Dockerfile` | 15 | JVM container image |
-| **Total** | **568** | |
+| **Total** | **528** | |
 <!-- loc:end -->
 
 
@@ -73,4 +73,3 @@ The JSON API returns the same results, apart from these details:
 - A site that stalls after its headers shows as unreachable instead of showing its status.
 - Up to 5 redirects are followed instead of 10, a malformed query (`%zz`) gets a 400.
 - Error messages are worded differently, a failed DNS lookup only says `java.net.ConnectException`.
-- Like the Go version, every API call rewrites the cache file, so concurrent requests may read a partial file and refresh everything.
