@@ -19,9 +19,9 @@ With AI-assisted programming it has become easy to build large, complicated syst
 | `frontend/main.js` | 73 | Loads, sorts and renders the services |
 | `frontend/style.css` | 42 | Custom styles on top of Blades |
 | `frontend/index.html` | 32 | Page skeleton and card template |
-| **Dockerfile** | **13** | |
-| `Dockerfile` | 13 | Distroless container image |
-| **Total** | **454** | |
+| **Dockerfile** | **14** | |
+| `Dockerfile` | 14 | Distroless container image |
+| **Total** | **455** | |
 <!-- loc:end -->
 
 
